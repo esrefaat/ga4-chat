@@ -1,0 +1,98 @@
+# Option 2: Sidecar Deployment - Separate MCP server container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ga4-chat-deployment
+  namespace: experimental
+  labels:
+    app: ga4-chat
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ga4-chat
+  template:
+    metadata:
+      labels:
+        app: ga4-chat
+    spec:
+      containers:
+      # Next.js application container
+      - name: ga4-chat
+        image: your-registry/ga4-chat:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        # MCP server connection via localhost (same pod)
+        - name: MCP_SERVER_COMMAND
+          value: "pipx"
+        - name: MCP_SERVER_ARGS
+          value: "run,analytics-mcp"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/shared/credentials/ga4-credentials.json"
+        - name: GOOGLE_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: ga4-credentials
+              key: google-project-id
+        volumeMounts:
+        - name: shared-credentials
+          mountPath: /shared/credentials
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      
+      # MCP server sidecar container
+      - name: mcp-server
+        image: your-registry/ga4-mcp-server:v1
+        imagePullPolicy: Always
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/shared/credentials/ga4-credentials.json"
+        - name: GOOGLE_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: ga4-credentials
+              key: google-project-id
+        volumeMounts:
+        - name: shared-credentials
+          mountPath: /shared/credentials
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        # MCP server runs via stdio, so no HTTP probe needed
+        # It will be managed by the parent process
+      
+      volumes:
+      - name: shared-credentials
+        secret:
+          secretName: ga4-credentials
+

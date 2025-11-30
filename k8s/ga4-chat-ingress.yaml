@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ga4-chat-ingress
+  namespace: experimental
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ga4chat.jovrnalism.com
+    secretName: ga4chat-tls
+  rules:
+  - host: ga4chat.jovrnalism.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ga4-chat-service
+            port:
+              number: 80
+

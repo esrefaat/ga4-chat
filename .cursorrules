@@ -1,0 +1,368 @@
+# Modern Web Application Development - Cursor Rules
+
+## File Creation Policy
+
+- **NEVER create files unless they're absolutely necessary for achieving your goal.**
+- **ALWAYS prefer editing an existing file to creating a new one.**
+- **NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.**
+
+## Response Style
+
+- **Be Concise**: Generate only the words necessary for the reply. Avoid repetitive summaries, confirmations, or status updates.
+- **No Summary Chains**: Do not provide summary after summary after confirmation. State what was done once, clearly and briefly.
+- **Precision Over Verbosity**: Expand explanations only when clarification is needed. Default to precise, direct responses.
+
+## Core Development Standards
+
+### Language and Runtime Requirements
+- **Python**: Always use `python3` and `pip3` explicitly in all scripts, commands, and documentation
+- **TypeScript**: Use TypeScript for type safety in frontend applications
+- **Node.js**: Use LTS versions and semantic versioning for packages
+- **Virtual Environments**: Use `python3 -m venv` for Python virtual environment creation
+- **Package Management**: Use `pip3 install` or `python3 -m pip install` for Python packages
+
+### Code Quality and Architecture
+- **Error Handling**: Implement comprehensive error handling and loading states
+- **Best Practices**: Follow framework-specific best practices (React hooks, functional components)
+- **API Integration**: Use async/await for API calls and implement proper caching strategies
+- **Testing**: Write unit tests for critical functions and integration tests for API endpoints
+- **Security**: Validate all inputs, implement proper authentication, and follow OWASP guidelines
+
+## UI/UX Development Standards
+
+### Design Implementation
+- **Design Fidelity**: Implement designs pixel-perfect with exact spacing, typography, and visual elements
+- **Responsive Design**: Ensure compatibility across mobile, tablet, and desktop devices
+- **Accessibility**: Use semantic HTML5 elements and validate accessibility compliance
+- **Component Libraries**: Prefer established component libraries (shadcn/ui) over custom implementations
+- **Icon Systems**: Use consistent icon libraries (Font Awesome) throughout the application
+
+### Frontend Componentization Rules
+- **Component Organization**: For React projects, store all components in `components/` or `components/ui/`
+- **Self-Contained Components**: Ensure each component is self-contained with typed props
+- **Component Standards**: Prefer functional components and shadcn/ui-based design
+- **Documentation**: Include usage examples via Storybook or inline code where applicable
+
+### Automated Testing Expectations
+- **Internal Testing Interfaces**: All projects must expose internal testing interfaces for smoke, integration, or health checks
+- **Required Endpoints**:
+  - `/healthz` endpoint for liveness and readiness checks
+  - Optional `/test` endpoint or CLI for testing external services and APIs
+- **Testing Deployment**: Include testing scripts or Postman/Playwright tests in every staging deployment
+- **Endpoint Documentation**: Surface testable endpoints or expected payloads during deployment previews
+
+### Admin Interface Standards
+- **Mandatory Implementation**: Every project MUST include a comprehensive admin interface
+- **Layout Patterns**: Use 3-column layouts for data-heavy interfaces
+- **Navigation**: Implement consistent sidebar navigation with clear icons
+- **Language Support**: Include language switching functionality in headers
+- **Interactive Elements**: Use tabbed interfaces for logical grouping of content
+
+### Required Admin Interface Components
+- **Testing Interface**: Default testing dashboard for all project functionality
+  - API endpoint testing with request/response validation
+  - Database query testing and result visualization
+  - Service health monitoring and status checks
+  - Performance metrics and response time tracking
+- **User Management System**: Comprehensive user administration
+  - User creation, editing, and role assignment
+  - Permission management and access control
+  - User activity monitoring and session management
+  - Bulk user operations and data export
+- **Activity Logging Dashboard**: Complete system activity tracking
+  - User action logs with timestamps and IP tracking
+  - System event monitoring and error logging
+  - API call logs with request/response details
+  - Performance metrics and usage analytics
+- **Content Generation Playground**: Required for projects with AI/content generation
+  - Real-time prompt testing with sample data
+  - Model comparison and A/B testing capabilities
+  - Prompt versioning and rollback functionality
+  - Cost tracking and usage monitoring
+  - Result export and sharing capabilities
+
+### Prompt Testing and AI Integration
+- **Testing Infrastructure**: Add playground functionality for all prompt-related features
+- **Real-time Testing**: Allow testing of prompts with sample data and result visualization
+- **Version Control**: Implement prompt versioning and rollback capabilities
+- **Performance Metrics**: Track prompt performance and response times
+
+### Automated Testing Expectations
+- **Internal Testing Interfaces**: All projects must expose internal testing interfaces for smoke, integration, or health checks
+- **Required Endpoints**:
+  - `/healthz` endpoint for liveness and readiness checks
+  - Optional `/test` endpoint or CLI for testing external services and APIs
+- **Testing Deployment**: Include testing scripts or Postman/Playwright tests in every staging deployment
+- **Endpoint Documentation**: Surface testable endpoints or expected payloads during deployment previews
+
+## Environment and Configuration Management
+
+### Environment Variables
+- **Location**: Store environment files in project root (`.env`)
+- **Hierarchy**: Build-time ENV > Runtime ConfigMap > Default fallbacks
+- **Loading**: Use `load_dotenv()` for Python applications
+- **Client-side Variables**: Set `NEXT_PUBLIC_*` variables at Docker build time
+- **Fallbacks**: Always provide sensible defaults in code
+
+### Environment File Management
+- **Standardized Naming Convention**: All environment variable files must follow standardized naming:
+  - `.env.local` - Local development environment
+  - `.env.staging` - Staging environment configuration
+  - `.env.production` - Production environment configuration
+- **Template-Based Security**: Use `*.template` files for version control and generate actual `.env` files locally
+- **No Real Secrets in VCS**: Never commit actual API keys, passwords, or secrets to version control
+- **Placeholder Pattern**: Use descriptive placeholders like `your_openai_api_key_here` in templates
+- **Environment Isolation**: Each environment must use separate databases and service configurations
+- **File Access Protocol**: If Cursor cannot write to the `.env` file, it must output the required `KEY=VALUE` pairs in copy-paste-ready format
+
+### Local Development vs Production
+- **URL Detection**: Scan for hardcoded local URLs before production deployment
+  ```bash
+  grep -r "localhost\|127\.0\.0\.1\|0\.0\.0\.0" --include="*.js" --include="*.ts" --include="*.py" --include="*.yaml" .
+  ```
+- **Production Configuration**:
+  - Frontend: Use environment variables for API URLs
+  - Backend: Use service names or DNS for inter-service communication
+  - Database: Use service DNS names instead of localhost
+  - WebSockets: Configure production-ready connection strings
+
+### Database Migration and Setup
+- **PostgreSQL Migration Protocol**: When migrating from SQLite to PostgreSQL, never assume existence of target database or reuse default user/database
+- **Environment Database Isolation**: Create separate databases for each environment:
+  - `projectname_cms` - Development (shared/local)
+  - `projectname_cms_staging` - Staging environment
+  - `projectname_cms_production` - Production environment
+- **Prompt for Intent**: If target PostgreSQL database or user is not found, ask user:
+  *"Would you like me to create a new PostgreSQL user and database for this project?"*
+
+#### Auto-Provision (If User Accepts)
+- **Generate SQL Commands for All Environments**:
+  ```sql
+  CREATE USER projectname_user WITH PASSWORD 'securePassword123';
+  CREATE DATABASE projectname_cms OWNER projectname_user;
+  CREATE DATABASE projectname_cms_staging OWNER projectname_user;
+  CREATE DATABASE projectname_cms_production OWNER projectname_user;
+  GRANT ALL PRIVILEGES ON DATABASE projectname_cms TO projectname_user;
+  GRANT ALL PRIVILEGES ON DATABASE projectname_cms_staging TO projectname_user;
+  GRANT ALL PRIVILEGES ON DATABASE projectname_cms_production TO projectname_user;
+  ```
+- **Execute Commands**: Auto-execute inside Postgres pod if access is permitted
+- **Development Automation**: Create helper scripts for port forwarding and environment setup
+- **Environment Templates**: Generate `.template` files with proper database configurations
+
+#### Manual Setup (If User Declines)
+- **Output Instructions**: Provide clear SQL commands and environment template configurations for manual creation
+- **Security**: Never use default `postgres` database or user unless explicitly instructed
+- **Service Discovery**: Always verify cluster service endpoints before configuration
+
+## Container and Deployment Strategy
+
+### Docker Best Practices
+- **Architecture**: Build for AMD64 architecture
+- **Versioning**: Use semantic versioning (`v1`, `v2`, `v3`) - never `latest` in production
+- **File Exclusion**: Create comprehensive `.dockerignore` files excluding:
+  - Development files (`test_*`, `sample-*`, `*.md`)
+  - IDE configurations (`.vscode/`, `.DS_Store`)
+  - Local databases (`*.db`, `*.sqlite3`)
+  - Build artifacts and temporary files
+
+### Container & Configuration Security
+- **Trivy for Image & Kubernetes Scanning**:
+  ```bash
+  trivy image --exit-code 1 --severity HIGH,CRITICAL <image-name>
+  trivy config ./k8s/
+  ```
+- **Dockle for Dockerfile Hygiene**:
+  - No root user
+  - Healthcheck defined
+  - No secrets in image
+- **Grype for Dependency CVEs** (optional):
+  ```bash
+  grype . --only-fixed
+  ```
+- **CI Integration**: Ensure scan order: Build → Trivy → Dockle → Push, then Config scan before K8s apply
+- **Manual Fallback**: If scanning cannot run automatically, Cursor must print exact CLI commands and warn user as post-deployment requirement
+
+### Environment Variable Management
+- **Next.js Applications**: Set `NEXT_PUBLIC_*` variables in Dockerfile before build
+  ```dockerfile
+  ENV NEXT_PUBLIC_API_BASE_URL=https://api.domain.com
+  RUN npm run build
+  ```
+- **Runtime Variables**: Use Kubernetes ConfigMaps/Secrets for server-side variables
+- **Security**: Store sensitive data (API keys, passwords) in Kubernetes Secrets
+- **Development Workflow**: Provide automation scripts for local development setup
+- **Secret Rotation**: Plan for regular rotation of API keys and database credentials
+- **Environment Loading Priority**: 
+  1. Explicit export variables (for development)
+  2. Environment-specific `.env` files
+  3. Kubernetes secrets/configmaps
+  4. Application defaults
+
+## Kubernetes Deployment Management
+
+### Resource Organization
+- **File Structure**: Store all Kubernetes YAML files in single `k8s/` folder
+- **Naming Convention**: Use `{service-name}-{resource-type}.yaml` pattern
+- **Resource Types**: 
+  - `-deployment.yaml` (Deployment objects)
+  - `-service.yaml` (Service objects)  
+  - `-configmap.yaml` (ConfigMap objects)
+  - `-secret.yaml` (Secret objects)
+  - `-ingress.yaml` (Ingress objects)
+
+### Deployment Protocol
+- **Build and Push**: 
+  ```bash
+  docker build --platform linux/amd64 -t username/app-name:v1 .
+  docker push username/app-name:v1
+  ```
+- **Deploy and Verify**:
+  ```bash
+  kubectl apply -f k8s/
+  kubectl rollout status deployment/app-name-deployment -n <namespace>
+  ```
+
+### Pod Management and Debugging
+- **Mandatory Post-Deployment Steps**:
+  ```bash
+  # Check logs for errors
+  kubectl logs -n <namespace> deployment/service-name-deployment --tail=50
+  
+  # Restart deployment for new images
+  kubectl rollout restart -n <namespace> deployment/service-name-deployment
+  
+  # Verify rollout completion
+  kubectl rollout status -n <namespace> deployment/service-name-deployment
+  
+  # Check pod status
+  kubectl get pods -n <namespace> -l app=service-name
+  ```
+
+- **Debugging Commands**:
+  ```bash
+  kubectl describe pod -n <namespace> pod-name
+  kubectl logs -n <namespace> pod-name --previous
+  kubectl get events -n <namespace> --sort-by='.metadata.creationTimestamp'
+  ```
+
+## SSL/TLS and Network Security
+
+### Certificate Management
+- **Verification**: Ensure ingress TLS configuration uses proper certificates
+- **Common Issues**: Check for empty `tls: []` configurations
+- **DNS Prerequisites**: Configure DNS before requesting SSL certificates
+- **Testing**: Use `openssl s_client -connect domain.com:443 -servername domain.com`
+
+### Ingress Configuration
+- **TLS Setup**:
+  ```yaml
+  tls:
+  - hosts:
+    - domain.com
+    secretName: domain-tls
+  ```
+- **Certificate Validation**: Verify certificates are from "Let's Encrypt", not fake certificates
+- **Routing**: Separate ingress configurations to avoid rewrite conflicts
+
+## Third-Party API Integration
+
+### API Key Management
+- **Validation Protocol**:
+  1. Test API keys directly with service provider
+  2. Check service logs for 401/403 authentication errors
+  3. Verify complete API key storage (not truncated)
+  4. Compare working key length with stored key length
+
+- **Secret Updates**:
+  ```bash
+  kubectl create secret generic service-secret \
+    --from-literal=API_KEY="full_working_key" \
+    --namespace=<namespace> --dry-run=client -o yaml | kubectl apply -f -
+  
+  kubectl rollout restart -n <namespace> deployment/service-deployment
+  kubectl exec -n <namespace> deployment/service-deployment -- printenv API_KEY | head -20
+  ```
+
+### Service Testing and Debugging
+- **Direct Testing**: Use `kubectl port-forward` to bypass ingress issues
+- **Documentation**: Check `/docs` or `/openapi.json` for correct endpoints
+- **Mock Data Detection**: Look for cost indicators and model names to verify real API usage
+- **Log Analysis**: Monitor authentication patterns and API response codes
+
+### Cost and Usage Validation
+- **Real vs Mock Indicators**:
+  - Real processing shows actual costs (e.g., $0.001785 USD)
+  - Mock processing shows $0.00 or placeholder costs
+  - Real responses include actual model names (e.g., "whisper-1", "gpt-4o")
+  - Token usage correlates with content complexity
+
+## Deployment Verification
+
+### Pre-Deployment Checklist
+- [ ] Scan for hardcoded local URLs
+- [ ] Verify environment variables are properly configured
+- [ ] Check Docker image excludes development files
+- [ ] Validate API keys and external service connectivity
+- [ ] Test SSL certificate configuration
+
+### Post-Deployment Verification
+- [ ] Pods are running and healthy
+- [ ] SSL certificates are valid (not fake certificates)
+- [ ] API endpoints return expected responses
+- [ ] Environment variables are loaded correctly
+- [ ] External API integrations are working (not falling back to mocks)
+- [ ] DNS resolution works for all domains
+- [ ] Cost tracking shows real processing costs
+
+### Troubleshooting Guidelines
+- **Environment Variable Issues**: Always restart pods after secret/configmap changes
+- **SSL Problems**: Verify ingress TLS configuration and certificate status
+- **API Integration Issues**: Check logs for authentication errors before debugging application logic
+- **Service Communication**: Use Kubernetes service DNS names for inter-service communication
+- **Mock Data Fallbacks**: Investigate API key validity and service provider account status
+
+## Deployment Promotion Structure
+
+### Environment Promotion Workflow
+- **Staging Namespace**: Use `staging` namespace for preview and testing
+- **Production Namespace**: Use `production` namespace for live releases
+- **Tagged Builds**: Use semantic versioning (`v1`, `v2`, `v3`) for all builds
+- **Health Check Requirements**: Post-deployment health checks must succeed before promotion
+- **Rollback Strategy**: Implement rollback capability via `kubectl rollout undo`
+
+### Promotion Protocol
+- **Pre-Promotion**: Verify staging environment health and functionality
+- **Deployment**: Deploy to production with proper versioning
+- **Post-Deployment**: Execute health checks and validation tests
+- **Rollback Plan**: Document and test rollback procedures for rapid recovery
+
+## Full Agentic - Project Specific Configuration
+
+### Service Port Configuration
+- **Frontend (Next.js)**: Must run on port **3073**
+- **Backend (FastAPI)**: Must run on port **8073** 
+- **Database (PostgreSQL)**: Runs on port **5434**
+- **Redis**: Runs on port **6379**
+- **API Base URL**: Frontend should connect to backend at `http://localhost:8073`
+- **Development Commands**:
+  - Database: `kubectl port-forward -n shared-services service/postgres-service 5434:5432` (background)
+  - Redis: `docker compose up -d redis`
+  - Celery Worker: `celery -A celery_app worker --loglevel=info` (background)
+  - Celery Beat: `celery -A celery_app beat --loglevel=info` (background)
+  - Backend: `python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8073 --reload`
+  - Frontend: `cd frontend && npm run dev -- --port 3073`
+
+### Full Agentic Requirements
+- **Backend Health Endpoint**: `GET http://localhost:8073/health`
+- **Backend API Documentation**: `http://localhost:8073/docs`
+- **Frontend Application**: `http://localhost:3073`
+- **Cross-Origin Configuration**: Backend must allow CORS for frontend port 3073
+- **Database Connection**: PostgreSQL must be accessible on `localhost:5434`
+
+### Prerequisites
+- **Database Setup**: PostgreSQL must be running and accessible before starting the backend
+- **Redis Setup**: Redis must be running for Celery task queue
+- **Environment Variables**: Ensure `.env` file is configured with correct database connection settings
+- **Virtual Environment**: Activate Python virtual environment before running backend commands
+- **Celery Services**: Both Celery worker and beat scheduler must be running for background tasks

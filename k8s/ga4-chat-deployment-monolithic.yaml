@@ -1,0 +1,65 @@
+# Option 1: Monolithic Deployment - MCP server in same container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ga4-chat-deployment
+  namespace: experimental
+  labels:
+    app: ga4-chat
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ga4-chat
+  template:
+    metadata:
+      labels:
+        app: ga4-chat
+    spec:
+      containers:
+      - name: ga4-chat
+        image: your-registry/ga4-chat:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/app/credentials/ga4-credentials.json"
+        - name: GOOGLE_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: ga4-credentials
+              key: google-project-id
+        volumeMounts:
+        - name: ga4-credentials
+          mountPath: /app/credentials
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: ga4-credentials
+        secret:
+          secretName: ga4-credentials
+

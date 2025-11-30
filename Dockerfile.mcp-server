@@ -1,0 +1,26 @@
+# Option 2: MCP Server Dockerfile (for sidecar pattern)
+FROM python:3.11-slim
+
+# Install pipx
+RUN pip install --no-cache-dir pipx && \
+    pipx ensurepath
+
+# Install analytics-mcp via pipx
+RUN pipx install analytics-mcp
+
+# Create directory for credentials
+RUN mkdir -p /app/credentials
+
+# Set working directory
+WORKDIR /app
+
+# Create non-root user
+RUN useradd --system --uid 1001 mcpuser && \
+    chown -R mcpuser:mcpuser /app
+
+USER mcpuser
+
+# The MCP server will be started via stdio transport
+# This container just provides the analytics-mcp command
+CMD ["pipx", "run", "analytics-mcp"]
+
