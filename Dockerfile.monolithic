@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pipx
-RUN pip3 install --no-cache-dir pipx && \
+RUN pip3 install --no-cache-dir --break-system-packages pipx && \
     pipx ensurepath
 
 # Install analytics-mcp globally via pipx
