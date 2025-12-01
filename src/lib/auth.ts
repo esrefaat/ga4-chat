@@ -52,6 +52,67 @@ export const AUTH_CONFIG = {
   sessionMaxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
 };
 
+// Session blacklist for invalidated sessions
+// In production, use Redis or database for distributed systems
+const sessionBlacklist = new Set<string>();
+const userSessionBlacklist = new Map<string, number>(); // username -> timestamp when invalidated
+
+/**
+ * Invalidates a specific session token
+ */
+export function invalidateSessionToken(token: string): void {
+  sessionBlacklist.add(token);
+}
+
+/**
+ * Invalidates all sessions for a specific user
+ */
+export function invalidateUserSessions(username: string): void {
+  userSessionBlacklist.set(username, Date.now());
+}
+
+/**
+ * Invalidates all sessions (global logout)
+ */
+export function invalidateAllSessions(): void {
+  sessionBlacklist.clear();
+  userSessionBlacklist.clear();
+  // Set a timestamp for all users
+  AUTH_CONFIG.users.forEach((user) => {
+    userSessionBlacklist.set(user.username, Date.now());
+  });
+}
+
+/**
+ * Checks if a session token is valid (not blacklisted)
+ */
+export function isSessionValid(token: string): boolean {
+  // Check if token is in blacklist
+  if (sessionBlacklist.has(token)) {
+    return false;
+  }
+
+  // Check if user's sessions were invalidated
+  try {
+    const username = getUsernameFromToken(token);
+    if (username) {
+      const invalidatedAt = userSessionBlacklist.get(username);
+      if (invalidatedAt) {
+        // Check if token was created before invalidation
+        const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+        if (payload.timestamp && payload.timestamp < invalidatedAt) {
+          return false;
+        }
+      }
+    }
+  } catch (error) {
+    // Invalid token format
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * Validates login credentials
  */

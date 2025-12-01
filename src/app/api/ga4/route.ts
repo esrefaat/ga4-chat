@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processGA4Query } from '@/lib/ga4-query-handler';
 import { callGA4Report, getCustomDimensionsAndMetrics, callGA4AccountSummaries } from './mcp-bridge';
 import { logActivity } from '@/lib/activity-logger';
-import { getUsernameFromToken, AUTH_CONFIG } from '@/lib/auth';
+import { getUsernameFromToken, AUTH_CONFIG, isSessionValid } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 // Disable caching to ensure fresh data on every request
@@ -28,9 +28,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get username from session
+    // Get username from session and validate
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get(AUTH_CONFIG.sessionCookieName);
+    
+    // Check if session is valid (not invalidated)
+    if (sessionToken && !isSessionValid(sessionToken.value)) {
+      // Session was invalidated, delete cookie
+      cookieStore.delete(AUTH_CONFIG.sessionCookieName);
+      return NextResponse.json(
+        { error: 'Session has been invalidated. Please log in again.' },
+        { status: 401 }
+      );
+    }
+    
     const username = sessionToken ? getUsernameFromToken(sessionToken.value) : 'anonymous';
 
     // Log the incoming prompt for debugging
