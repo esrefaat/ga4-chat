@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getActivityLogs, getActivityStats } from '@/lib/activity-logger';
 import { cookies } from 'next/headers';
-import { AUTH_CONFIG } from '@/lib/auth';
+import { AUTH_CONFIG, isSessionValid, getUsernameFromToken, getUserByUsername } from '@/lib/auth';
 
 /**
- * GET /api/activity - Get activity logs
+ * GET /api/activity - Get activity logs (Admin only)
  * Query params:
  * - username: Filter by username (optional)
  * - limit: Number of logs to return (default: 100)
@@ -15,10 +15,28 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get(AUTH_CONFIG.sessionCookieName);
     
-    if (!sessionToken) {
+    if (!sessionToken || !isSessionValid(sessionToken.value)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    // Get username from session token
+    const username = getUsernameFromToken(sessionToken.value);
+    if (!username) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
+    const user = getUserByUsername(username);
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden: Admin access required' },
+        { status: 403 }
       );
     }
 
