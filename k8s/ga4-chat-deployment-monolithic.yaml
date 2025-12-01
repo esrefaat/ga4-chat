@@ -20,7 +20,7 @@ spec:
       - name: dockerhub-secret
       containers:
       - name: ga4-chat
-        image: esrefaat/ga4-chat:v1
+        image: esrefaat/ga4-chat:v2
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
