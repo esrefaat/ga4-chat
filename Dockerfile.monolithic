@@ -40,9 +40,10 @@ RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
 # Copy built application
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# Create public directory (Next.js may not have one)
+RUN mkdir -p ./public
 
 # Create directory for credentials
 RUN mkdir -p /app/credentials && chown -R nextjs:nodejs /app
