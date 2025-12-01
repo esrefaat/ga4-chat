@@ -37,6 +37,11 @@ spec:
             secretKeyRef:
               name: ga4-credentials
               key: google-project-id
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: OPENAI_API_KEY
         volumeMounts:
         - name: ga4-credentials
           mountPath: /app/credentials
