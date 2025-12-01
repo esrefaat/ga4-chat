@@ -10,6 +10,12 @@ interface User {
   role: string;
 }
 
+interface UserFormData {
+  username: string;
+  password: string;
+  role: string;
+}
+
 export default function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -18,6 +24,13 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [formData, setFormData] = useState<UserFormData>({
+    username: '',
+    password: '',
+    role: 'user',
+  });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -120,6 +133,129 @@ export default function SettingsPage() {
     }
   };
 
+  const createUser = async () => {
+    try {
+      setError(null);
+      setSuccess(null);
+
+      if (!formData.username || !formData.password) {
+        setError('Username and password are required');
+        return;
+      }
+
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+          role: formData.role,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user');
+      }
+
+      setSuccess('User created successfully');
+      setShowCreateForm(false);
+      setFormData({ username: '', password: '', role: 'user' });
+      await loadData();
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create user');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const updateUser = async (username: string) => {
+    try {
+      setError(null);
+      setSuccess(null);
+
+      const updates: { password?: string; role?: string } = {};
+      if (formData.password) updates.password = formData.password;
+      if (formData.role) updates.role = formData.role;
+
+      if (Object.keys(updates).length === 0) {
+        setError('No changes to save');
+        return;
+      }
+
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          ...updates,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update user');
+      }
+
+      setSuccess('User updated successfully');
+      setEditingUser(null);
+      setFormData({ username: '', password: '', role: 'user' });
+      await loadData();
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update user');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const deleteUser = async (username: string) => {
+    if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setSuccess(null);
+
+      const response = await fetch(`/api/users?username=${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
+      setSuccess('User deleted successfully');
+      await loadData();
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const startEdit = (user: User) => {
+    setEditingUser(user.username);
+    setFormData({
+      username: user.username,
+      password: '',
+      role: user.role,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingUser(null);
+    setFormData({ username: '', password: '', role: 'user' });
+  };
+
   if (authLoading || loading) {
     return (
       <div className="loading-screen">
@@ -180,7 +316,118 @@ export default function SettingsPage() {
           )}
 
           <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px' }}>Users</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Users</h2>
+              <button
+                onClick={() => {
+                  setShowCreateForm(!showCreateForm);
+                  setEditingUser(null);
+                  setFormData({ username: '', password: '', role: 'user' });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#2563eb'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#3b82f6'}
+              >
+                {showCreateForm ? 'Cancel' : '+ Add User'}
+              </button>
+            </div>
+
+            {showCreateForm && (
+              <div style={{
+                background: 'var(--bg-secondary, #fff)',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color, #e5e7eb)',
+                padding: '20px',
+                marginBottom: '16px',
+              }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Create New User</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                      Username
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid var(--border-color, #e5e7eb)',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                      placeholder="Enter username"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid var(--border-color, #e5e7eb)',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                      placeholder="Enter password (min 8 characters)"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                      Role
+                    </label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid var(--border-color, #e5e7eb)',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={createUser}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      alignSelf: 'flex-start',
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
+                  >
+                    Create User
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{
               background: 'var(--bg-secondary, #fff)',
               borderRadius: '12px',
@@ -198,37 +445,160 @@ export default function SettingsPage() {
                 <tbody>
                   {users.map((user, index) => (
                     <tr key={user.username} style={{ borderBottom: index < users.length - 1 ? '1px solid var(--border-color, #e5e7eb)' : 'none' }}>
-                      <td style={{ padding: '12px 16px' }}>{user.username}</td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          background: user.role === 'admin' ? '#dbeafe' : '#f3f4f6',
-                          color: user.role === 'admin' ? '#1e40af' : '#374151',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                        }}>
-                          {user.role}
-                        </span>
+                        {editingUser === user.username ? (
+                          <input
+                            type="text"
+                            value={formData.username}
+                            disabled
+                            style={{
+                              padding: '4px 8px',
+                              border: '1px solid var(--border-color, #e5e7eb)',
+                              borderRadius: '4px',
+                              fontSize: '14px',
+                              background: '#f3f4f6',
+                            }}
+                          />
+                        ) : (
+                          user.username
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {editingUser === user.username ? (
+                          <select
+                            value={formData.role}
+                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                            style={{
+                              padding: '4px 8px',
+                              border: '1px solid var(--border-color, #e5e7eb)',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                            }}
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        ) : (
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            background: user.role === 'admin' ? '#dbeafe' : '#f3f4f6',
+                            color: user.role === 'admin' ? '#1e40af' : '#374151',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                          }}>
+                            {user.role}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => invalidateUserSessions(user.username)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
-                          onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
-                        >
-                          Invalidate Sessions
-                        </button>
+                        {editingUser === user.username ? (
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <input
+                              type="password"
+                              value={formData.password}
+                              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                              placeholder="New password (optional)"
+                              style={{
+                                padding: '4px 8px',
+                                border: '1px solid var(--border-color, #e5e7eb)',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                width: '150px',
+                              }}
+                            />
+                            <button
+                              onClick={() => updateUser(user.username)}
+                              style={{
+                                padding: '4px 12px',
+                                background: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              style={{
+                                padding: '4px 12px',
+                                background: '#6b7280',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#4b5563'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#6b7280'}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => startEdit(user)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#2563eb'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#3b82f6'}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => invalidateUserSessions(user.username)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#f59e0b',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#d97706'}
+                              onMouseOut={(e) => e.currentTarget.style.background = '#f59e0b'}
+                            >
+                              Invalidate
+                            </button>
+                            {user.username !== currentUser?.username && (
+                              <button
+                                onClick={() => deleteUser(user.username)}
+                                style={{
+                                  padding: '6px 12px',
+                                  background: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: '500',
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

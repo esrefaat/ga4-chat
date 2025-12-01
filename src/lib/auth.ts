@@ -32,6 +32,11 @@ const DEFAULT_USERS: User[] = [
     password: 'User3@GA4Chat2024!Secure',
     role: 'user',
   },
+  {
+    username: 'm.hani',
+    password: 'Mhani@GA4Chat2024!Secure',
+    role: 'user',
+  },
 ];
 
 // Parse users from environment variable (JSON format) or use defaults
@@ -128,6 +133,92 @@ export function validateCredentials(username: string, password: string): User | 
  */
 export function getUserByUsername(username: string): User | undefined {
   return AUTH_CONFIG.users.find((u) => u.username === username);
+}
+
+/**
+ * Create a new user
+ */
+export function createUser(username: string, password: string, role: string = 'user'): { success: boolean; error?: string } {
+  // Validate username
+  if (!username || username.trim().length === 0) {
+    return { success: false, error: 'Username is required' };
+  }
+
+  // Validate password
+  if (!password || password.length < 8) {
+    return { success: false, error: 'Password must be at least 8 characters' };
+  }
+
+  // Check if user already exists
+  if (getUserByUsername(username)) {
+    return { success: false, error: 'Username already exists' };
+  }
+
+  // Validate role
+  if (role !== 'admin' && role !== 'user') {
+    return { success: false, error: 'Role must be "admin" or "user"' };
+  }
+
+  // Add user
+  AUTH_CONFIG.users.push({
+    username: username.trim(),
+    password,
+    role,
+  });
+
+  return { success: true };
+}
+
+/**
+ * Update an existing user
+ */
+export function updateUser(username: string, updates: { password?: string; role?: string }): { success: boolean; error?: string } {
+  const user = getUserByUsername(username);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Update password if provided
+  if (updates.password !== undefined) {
+    if (updates.password.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters' };
+    }
+    user.password = updates.password;
+  }
+
+  // Update role if provided
+  if (updates.role !== undefined) {
+    if (updates.role !== 'admin' && updates.role !== 'user') {
+      return { success: false, error: 'Role must be "admin" or "user"' };
+    }
+    user.role = updates.role;
+  }
+
+  return { success: true };
+}
+
+/**
+ * Delete a user
+ */
+export function deleteUser(username: string): { success: boolean; error?: string } {
+  const userIndex = AUTH_CONFIG.users.findIndex((u) => u.username === username);
+  if (userIndex === -1) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Prevent deleting the last admin user
+  const adminUsers = AUTH_CONFIG.users.filter((u) => u.role === 'admin');
+  if (userIndex !== -1 && AUTH_CONFIG.users[userIndex].role === 'admin' && adminUsers.length === 1) {
+    return { success: false, error: 'Cannot delete the last admin user' };
+  }
+
+  // Invalidate user sessions before deletion
+  invalidateUserSessions(username);
+
+  // Remove user
+  AUTH_CONFIG.users.splice(userIndex, 1);
+
+  return { success: true };
 }
 
 /**

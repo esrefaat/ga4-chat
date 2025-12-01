@@ -24,6 +24,11 @@ The application includes the following default users:
 - **Password**: `User3@GA4Chat2024!Secure`
 - **Role**: `user`
 
+### User 4 (m.hani)
+- **Username**: `m.hani`
+- **Password**: `Mhani@GA4Chat2024!Secure`
+- **Role**: `user`
+
 ## Changing Credentials
 
 ### Option 1: Environment Variables (Recommended for Production)
