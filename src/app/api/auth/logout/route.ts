@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const sessionToken = cookieStore.get(AUTH_CONFIG.sessionCookieName);
     
     // Get username from session token
-    const username = sessionToken ? getUsernameFromToken(sessionToken.value) : 'unknown';
+    const username = sessionToken ? (getUsernameFromToken(sessionToken.value) || 'unknown') : 'unknown';
     
     cookieStore.delete(AUTH_CONFIG.sessionCookieName);
 
