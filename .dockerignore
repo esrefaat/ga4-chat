@@ -54,3 +54,10 @@ dist
 # Vercel
 .vercel
 
+# Credentials (never include in Docker image!)
+credentials/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
