@@ -94,17 +94,10 @@ async function getMCPClient(): Promise<Client> {
         }
       );
 
-      console.log('🔌 Connecting to MCP server...');
-      console.log('📁 Credentials path:', credentialsPath);
-      console.log('🔑 Project ID:', process.env.GOOGLE_PROJECT_ID || 'not set');
-      
       await client.connect(transport);
-      console.log('✅ MCP client connected successfully');
-      
       mcpClient = client;
       return client;
     } catch (error) {
-      console.error('❌ MCP connection error:', error);
       mcpClientPromise = null; // Reset on error so we can retry
       throw error;
     }

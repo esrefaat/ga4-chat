@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processGA4Query } from '@/lib/ga4-query-handler';
 import { callGA4Report, getCustomDimensionsAndMetrics, callGA4AccountSummaries } from './mcp-bridge';
+import { logActivity } from '@/lib/activity-logger';
+import { getUsernameFromToken, AUTH_CONFIG } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 // Disable caching to ensure fresh data on every request
 export const dynamic = 'force-dynamic';
@@ -25,9 +28,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get username from session
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get(AUTH_CONFIG.sessionCookieName);
+    const username = sessionToken ? getUsernameFromToken(sessionToken.value) : 'anonymous';
+
     // Log the incoming prompt for debugging
     console.log('📝 Incoming prompt:', prompt);
     console.log('🕐 Request timestamp:', new Date().toISOString());
+    
+    // Log user activity
+    logActivity(
+      username || 'anonymous',
+      'GA4_QUERY',
+      {
+        prompt: prompt.substring(0, 200), // Limit prompt length in logs
+        queryLength: prompt.length,
+      },
+      {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined,
+      }
+    );
     
     // Process the query using the GA4 query handler
     // This will interpret the query, parse parameters, and for report queries,
@@ -36,6 +58,16 @@ export async function POST(request: NextRequest) {
     
     // Log the parsed query result
     console.log('🔍 Parsed query result:', JSON.stringify(queryResult, null, 2));
+    
+    // Log successful query processing
+    logActivity(
+      username || 'anonymous',
+      'GA4_QUERY_PROCESSED',
+      {
+        queryType: queryResult.data?.type || 'unknown',
+        hasData: !!queryResult.data,
+      }
+    );
 
     // If it's a list properties query, call the MCP tool
     if (queryResult.data?.type === 'list_properties') {

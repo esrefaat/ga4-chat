@@ -1,11 +1,28 @@
 # Authentication Credentials
 
-## Default Credentials
+## Default Users
 
-The application uses the following default credentials:
+The application includes the following default users:
 
+### Admin User
 - **Username**: `admin`
 - **Password**: `GA4@Chat2024!Secure#Pass`
+- **Role**: `admin`
+
+### User 1
+- **Username**: `user1`
+- **Password**: `User1@GA4Chat2024!Secure`
+- **Role**: `user`
+
+### User 2
+- **Username**: `user2`
+- **Password**: `User2@GA4Chat2024!Secure`
+- **Role**: `user`
+
+### User 3
+- **Username**: `user3`
+- **Password**: `User3@GA4Chat2024!Secure`
+- **Role**: `user`
 
 ## Changing Credentials
 
