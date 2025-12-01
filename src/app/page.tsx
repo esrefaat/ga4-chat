@@ -4,16 +4,19 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGA4Chat } from '@/hooks/useGA4Chat';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import SavedQuestions from '@/components/SavedQuestions';
 import ThemeToggle from '@/components/ThemeToggle';
+import Link from 'next/link';
 import '@/styles/chat.css';
 import '@/styles/theme-toggle.css';
 
 export default function Home() {
   const { messages, isLoading, sendToGA4, messagesEndRef } = useGA4Chat();
   const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { isAdmin } = useCurrentUser();
   const router = useRouter();
 
   // Redirect to login if not authenticated
@@ -68,6 +71,21 @@ export default function Home() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {isAdmin && (
+                <Link href="/settings" style={{ textDecoration: 'none' }}>
+                  <button className="logout-btn" style={{ background: 'transparent', border: '1px solid currentColor' }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
+                      <path
+                        d="M8 1v6M8 9v6M1 8h6M9 8h6"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span>Settings</span>
+                  </button>
+                </Link>
+              )}
               <ThemeToggle />
               <button className="logout-btn" onClick={logout}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

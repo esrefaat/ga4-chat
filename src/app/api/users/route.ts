@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActivityLogs, getActivityStats } from '@/lib/activity-logger';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG, isSessionValid, getUsernameFromToken, getUserByUsername } from '@/lib/auth';
 
 /**
- * GET /api/activity - Get activity logs (Admin only)
- * Query params:
- * - username: Filter by username (optional)
- * - limit: Number of logs to return (default: 100)
+ * GET /api/users - Get all users (Admin only)
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get(AUTH_CONFIG.sessionCookieName);
     
@@ -22,7 +17,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get username from session token
     const username = getUsernameFromToken(sessionToken.value);
     if (!username) {
       return NextResponse.json(
@@ -40,20 +34,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const filterUsername = searchParams.get('username') || undefined;
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
-
-    const logs = getActivityLogs(filterUsername, limit);
-    const stats = getActivityStats();
+    // Return users without passwords
+    const users = AUTH_CONFIG.users.map(({ password, ...user }) => ({
+      ...user,
+      role: user.role || 'user',
+    }));
 
     return NextResponse.json({
-      logs,
-      stats,
-      count: logs.length,
+      users,
     });
   } catch (error) {
-    console.error('Activity logs error:', error);
+    console.error('Users API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
