@@ -14,7 +14,7 @@ export interface User {
 const DEFAULT_USERS: User[] = [
   {
     username: 'admin',
-    password: 'GA4@Chat2024!Secure#Pass',
+    password: 'Admin@GA4Chat2024!NewPass',
     role: 'admin',
   },
   {

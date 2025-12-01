@@ -6,7 +6,7 @@ The application includes the following default users:
 
 ### Admin User
 - **Username**: `admin`
-- **Password**: `GA4@Chat2024!Secure#Pass`
+- **Password**: `Admin@GA4Chat2024!NewPass`
 - **Role**: `admin`
 
 ### User 1
