@@ -16,6 +16,8 @@ spec:
       labels:
         app: ga4-chat
     spec:
+      imagePullSecrets:
+      - name: dockerhub-secret
       containers:
       - name: ga4-chat
         image: esrefaat/ga4-chat:v1
