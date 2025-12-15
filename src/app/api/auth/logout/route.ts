@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     cookieStore.delete(AUTH_CONFIG.sessionCookieName);
 
     // Log logout activity
-    logActivity(
+    await logActivity(
       username,
       'LOGOUT',
       {},

@@ -79,8 +79,16 @@ Extract metrics array. Supported metrics:
 - "bounces" → "bounces"
 - "events" → "eventCount"
 - "revenue" → "totalRevenue"
+- "engagement" → ["engagementRate", "engagedSessions", "eventCount"]
+- "engagement rate" → "engagementRate"
+- "engaged sessions" → "engagedSessions"
+- "session duration" → "averageSessionDuration"
+- "average session duration" → "averageSessionDuration"
+- "time on site" → "averageSessionDuration"
 
 **Smart defaults based on context:**
+- Engagement queries ("in terms of engagement", "by engagement", "engagement") → ["engagementRate", "engagedSessions", "eventCount", "screenPageViews"]
+- Author/content creator queries with engagement → ["engagementRate", "engagedSessions", "eventCount", "screenPageViews"]
 - Traffic source/channel queries → ["sessions", "activeUsers"]
 - Pageview queries → ["screenPageViews", "sessions"]
 - Default → ["activeUsers", "sessions", "screenPageViews"]
@@ -286,13 +294,25 @@ Return ONLY valid JSON with corrected parameters:`;
  */
 export function formatMCPParams(
   extractedParams: ExtractedGA4Params,
-  originalPrompt: string
+  originalPrompt: string,
+  defaultPropertyId?: string
 ): GA4ReportParams {
   const lowerPrompt = originalPrompt.toLowerCase();
 
   // Smart metric defaults based on query context
   let defaultMetrics = ['activeUsers', 'sessions', 'screenPageViews'];
-  if (
+  
+  // Check for engagement queries (highest priority)
+  const isEngagementQuery = 
+    lowerPrompt.includes('in terms of engagement') ||
+    lowerPrompt.includes('by engagement') ||
+    lowerPrompt.includes('engagement') ||
+    (lowerPrompt.includes('author') && lowerPrompt.includes('engagement')) ||
+    (lowerPrompt.includes('top') && lowerPrompt.includes('engagement'));
+  
+  if (isEngagementQuery) {
+    defaultMetrics = ['engagementRate', 'engagedSessions', 'eventCount', 'screenPageViews'];
+  } else if (
     lowerPrompt.includes('traffic source') ||
     lowerPrompt.includes('source') ||
     lowerPrompt.includes('referrer') ||
@@ -336,8 +356,11 @@ export function formatMCPParams(
   }
 
   // Build MCP-ready parameters
+  // extractedParams.property_id should already be set correctly by handleReportQuery
+  // Use it directly, with defaultPropertyId as fallback only if extractedParams.property_id is missing
+  const finalPropertyId = extractedParams.property_id || defaultPropertyId || '358809672';
   const mcpParams: GA4ReportParams = {
-    property_id: extractedParams.property_id || '358809672',
+    property_id: finalPropertyId,
     date_ranges:
       extractedParams.date_ranges || [
         {
@@ -355,31 +378,59 @@ export function formatMCPParams(
   };
 
   // Smart date dimension addition
+  // Skip date dimension for engagement queries with author/content dimensions (aggregate by author, not time)
+  const hasAuthorDimension = mcpParams.dimensions.some(dim => 
+    dim.includes('author') || dim.includes('article')
+  );
+  const shouldSkipDateForEngagement = isEngagementQuery && hasAuthorDimension;
+  
   if (
     mcpParams.dimensions.length > 0 &&
     !mcpParams.dimensions.includes('date') &&
-    mcpParams.date_ranges
+    mcpParams.date_ranges &&
+    !shouldSkipDateForEngagement
   ) {
     const explicitNoDate = lowerPrompt.match(/\b(?:no|without|excluding)\s+date\b/i);
     if (!explicitNoDate && !wantsPieChart && !hasCategoricalDimension) {
       mcpParams.dimensions.unshift('date');
     }
-  } else if (mcpParams.dimensions.length === 0 && mcpParams.date_ranges && !wantsPieChart) {
+  } else if (
+    mcpParams.dimensions.length === 0 && 
+    mcpParams.date_ranges && 
+    !wantsPieChart && 
+    !shouldSkipDateForEngagement
+  ) {
     mcpParams.dimensions.push('date');
   }
 
   // Add default order_bys
   if (!mcpParams.order_bys) {
-    const primaryDimension = mcpParams.dimensions.includes('date')
-      ? 'date'
-      : mcpParams.dimensions[0];
-    if (primaryDimension) {
+    // For engagement queries, order by engagementRate descending
+    const hasEngagementMetrics = mcpParams.metrics.some(metric => 
+      metric === 'engagementRate' || metric === 'engagedSessions'
+    );
+    
+    if (hasEngagementMetrics && isEngagementQuery) {
+      // Order by engagementRate descending for engagement queries
       mcpParams.order_bys = [
         {
-          dimension: { dimension_name: primaryDimension },
-          desc: false,
+          metric: { metric_name: 'engagementRate' },
+          desc: true,
         },
       ];
+    } else {
+      // Default: order by primary dimension
+      const primaryDimension = mcpParams.dimensions.includes('date')
+        ? 'date'
+        : mcpParams.dimensions[0];
+      if (primaryDimension) {
+        mcpParams.order_bys = [
+          {
+            dimension: { dimension_name: primaryDimension },
+            desc: false,
+          },
+        ];
+      }
     }
   }
 

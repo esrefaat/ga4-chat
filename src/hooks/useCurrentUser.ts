@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 interface User {
   username: string;
   role: string;
+  default_property_id?: string | null;
 }
 
 export function useCurrentUser() {

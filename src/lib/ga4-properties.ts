@@ -1,0 +1,85 @@
+/**
+ * GA4 Properties List
+ * 
+ * Hardcoded list of GA4 properties fetched from MCP.
+ * Update this list by running: node scripts/fetch-properties.js
+ */
+
+export interface GA4Property {
+  id: string;
+  name: string;
+  accountName: string;
+}
+
+export const GA4_PROPERTIES: GA4Property[] = [
+  { id: '194176332', name: 'Independent Arabic + Mobile App', accountName: 'SRMG Websites - Final G4' },
+  { id: '197199756', name: 'Arabnews English + Mobile APP', accountName: 'SRMG Websites - Final G4' },
+  { id: '221805438', name: 'Asharq Al Awsat - Arabic + Mobile App', accountName: 'SRMG Websites - Final G4' },
+  { id: '282896841', name: 'Manga Arabia Kids - App', accountName: 'SRMG Websites - Final G4' },
+  { id: '291386170', name: 'Manga Arabia Youth - App', accountName: 'SRMG Websites - Final G4' },
+  { id: '353452348', name: 'srmgacademybootcamp', accountName: 'SRMG Websites - Final G4' },
+  { id: '358690483', name: 'Asharq Al Awsat - English', accountName: 'SRMG Websites - Final G4' },
+  { id: '358809672', name: 'Asharq Al Awsat - Arabic', accountName: 'SRMG Websites - Final G4' },
+  { id: '358816132', name: 'Asharq Al Awsat - URDU', accountName: 'SRMG Websites - Final G4' },
+  { id: '358853784', name: 'Asharq Al Awsat - Turkish', accountName: 'SRMG Websites - Final G4' },
+  { id: '359384771', name: 'Asharq Al Awsat all', accountName: 'SRMG Websites - Final G4' },
+  { id: '360319906', name: 'SRMG.VC', accountName: 'SRMG Websites - Final G4' },
+  { id: '362048475', name: 'Arabnews English', accountName: 'SRMG Websites - Final G4' },
+  { id: '362050402', name: 'Sayidaty Magazine', accountName: 'SRMG Websites - Final G4' },
+  { id: '362059582', name: 'Arabnews JP', accountName: 'SRMG Websites - Final G4' },
+  { id: '362065058', name: 'Arabnews FR', accountName: 'SRMG Websites - Final G4' },
+  { id: '362073016', name: 'Sayidaty kitchen', accountName: 'SRMG Websites - Final G4' },
+  { id: '362081617', name: 'Hia Magazine', accountName: 'SRMG Websites - Final G4' },
+  { id: '362096223', name: 'Arabnews PK', accountName: 'SRMG Websites - Final G4' },
+  { id: '363312818', name: 'Asharq Al Awsat - Persian', accountName: 'SRMG Websites - Final G4' },
+  { id: '368197318', name: 'Arabnews all', accountName: 'SRMG Websites - Final G4' },
+  { id: '369353448', name: 'Sayidaty all', accountName: 'SRMG Websites - Final G4' },
+  { id: '369367746', name: 'Majallah all', accountName: 'SRMG Websites - Final G4' },
+  { id: '369368336', name: 'Independent Persian', accountName: 'SRMG Websites - Final G4' },
+  { id: '369373481', name: 'Independent Arabic', accountName: 'SRMG Websites - Final G4' },
+  { id: '369390740', name: 'Al Jamila', accountName: 'SRMG Websites - Final G4' },
+  { id: '369398457', name: 'List Magazine', accountName: 'SRMG Websites - Final G4' },
+  { id: '369398813', name: 'Arriyadiyah', accountName: 'SRMG Websites - Final G4' },
+  { id: '369406321', name: 'Independent URDU', accountName: 'SRMG Websites - Final G4' },
+  { id: '369406670', name: 'Independent Turkish', accountName: 'SRMG Websites - Final G4' },
+  { id: '369408983', name: 'Aleqt', accountName: 'SRMG Websites - Final G4' },
+  { id: '369410400', name: 'Majallah English', accountName: 'SRMG Websites - Final G4' },
+  { id: '369410546', name: 'Majallah Arabic', accountName: 'SRMG Websites - Final G4' },
+  { id: '372256184', name: 'Raff Publishing', accountName: 'SRMG Websites - Final G4' },
+  { id: '373364146', name: 'Akhbaar24', accountName: 'SRMG Websites - Final G4' },
+  { id: '374023442', name: 'Urdunews', accountName: 'SRMG Websites - Final G4' },
+  { id: '374807955', name: 'Malayalam News', accountName: 'SRMG Websites - Final G4' },
+  { id: '374808519', name: 'About her', accountName: 'SRMG Websites - Final G4' },
+  { id: '376107957', name: 'Manga Arabia', accountName: 'SRMG Websites - Final G4' },
+  { id: '376120039', name: 'Arrajol', accountName: 'SRMG Websites - Final G4' },
+  { id: '376125952', name: 'rrarabia', accountName: 'SRMG Websites - Final G4' },
+  { id: '378986099', name: 'Canneslions', accountName: 'SRMG Websites - Final G4' },
+  { id: '379470462', name: 'SRMG', accountName: 'SRMG Websites - Final G4' },
+  { id: '380376788', name: 'SRMG Think', accountName: 'SRMG Websites - Final G4' },
+  { id: '403352956', name: 'Billboardarabia', accountName: 'SRMG Websites - Final G4' },
+  { id: '407466813', name: 'Menaforum', accountName: 'SRMG Websites - Final G4' },
+  { id: '407751383', name: 'HiaHub', accountName: 'SRMG Websites - Final G4' },
+  { id: '410801582', name: 'neom.journalismbootcamp.com', accountName: 'SRMG Websites - Final G4' },
+  { id: '441817192', name: 'Mangainternational', accountName: 'SRMG Websites - Final G4' },
+  { id: '473904083', name: 'sta.hiamag.com', accountName: 'SRMG Websites - Final G4' },
+  { id: '475659211', name: 'Store MangaArabia - Salla', accountName: 'SRMG Websites - Final G4' },
+  { id: '481995571', name: 'SRMG Media Solution', accountName: 'SRMG Websites - Final G4' },
+  { id: '500715675', name: 'apco-columbia', accountName: 'SRMG Websites - Final G4' },
+  { id: '501096431', name: 'G.O.A.T APP', accountName: 'SRMG Websites - Final G4' },
+  { id: '231608388', name: 'Mobile Apps', accountName: 'SRMG Websites - Universal' },
+  { id: '260681155', name: 'www.sayidy.net', accountName: 'SRMG Websites - Universal' },
+  { id: '290867469', name: 'YouKAN', accountName: 'SRMG Websites - Universal' },
+  { id: '291394152', name: 'Mangayouth', accountName: 'SRMG Websites - Universal' },
+  { id: '309616126', name: 'www.arabnews.FR', accountName: 'SRMG Websites - Universal' },
+  { id: '309651326', name: 'About Her - GA4 (Delete)', accountName: 'SRMG Websites - Universal' },
+  { id: '342732333', name: 'HiaHUb', accountName: 'SRMG Websites - Universal' },
+  { id: '364931733', name: 'mangaarabia - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '371502619', name: 'http://www.facesofsaudi.com - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '396667367', name: 'Malayalamnewsdaily - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '399007332', name: 'Urdu Newspaper - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '401821161', name: 'صحيفة الرياضية - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '401830727', name: 'Arrajol Magazine - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '403510114', name: 'Sayidaty Magazine - GA4', accountName: 'SRMG Websites - Universal' },
+  { id: '403526788', name: 'Al Jamila Magazine - GA4', accountName: 'SRMG Websites - Universal' },
+];
+

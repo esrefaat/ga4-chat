@@ -19,7 +19,7 @@ export const revalidate = 0;
  */
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, propertyId } = await request.json();
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
@@ -44,17 +44,35 @@ export async function POST(request: NextRequest) {
     
     const username = sessionToken ? getUsernameFromToken(sessionToken.value) : 'anonymous';
 
+    // Get user's default property if available
+    let defaultPropertyId = propertyId; // Use propertyId from request if provided
+    if (!defaultPropertyId && username && username !== 'anonymous') {
+      try {
+        const { getUserByUsername } = await import('@/lib/auth');
+        const user = await getUserByUsername(username);
+        if (user?.default_property_id) {
+          defaultPropertyId = user.default_property_id;
+        }
+      } catch (error) {
+        console.error('Failed to get user default property:', error);
+      }
+    }
+
     // Log the incoming prompt for debugging
     console.log('📝 Incoming prompt:', prompt);
     console.log('🕐 Request timestamp:', new Date().toISOString());
+    console.log('🏠 Request property ID:', propertyId);
+    console.log('🏠 Final default property ID:', defaultPropertyId);
     
     // Log user activity
-    logActivity(
+    await logActivity(
       username || 'anonymous',
       'GA4_QUERY',
       {
         prompt: prompt.substring(0, 200), // Limit prompt length in logs
         queryLength: prompt.length,
+        propertyId: propertyId,
+        defaultPropertyId: defaultPropertyId,
       },
       {
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
@@ -65,13 +83,13 @@ export async function POST(request: NextRequest) {
     // Process the query using the GA4 query handler
     // This will interpret the query, parse parameters, and for report queries,
     // it will attempt to call the MCP tool to get real data
-    const queryResult = await processGA4Query(prompt);
+    const queryResult = await processGA4Query(prompt, defaultPropertyId);
     
     // Log the parsed query result
     console.log('🔍 Parsed query result:', JSON.stringify(queryResult, null, 2));
     
     // Log successful query processing
-    logActivity(
+    await logActivity(
       username || 'anonymous',
       'GA4_QUERY_PROCESSED',
       {

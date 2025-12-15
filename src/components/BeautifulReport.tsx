@@ -1,6 +1,20 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faArrowTrendUp, 
+  faArrowTrendDown,
+  faChartLine,
+  faUsers,
+  faUserPlus,
+  faEye,
+  faClock,
+  faHeart,
+  faArrowRight,
+  faBolt,
+  faChartBar,
+} from '@fortawesome/free-solid-svg-icons';
 import GA4Chart from './GA4Chart';
 import ComprehensiveReport from './ComprehensiveReport';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +62,7 @@ export default function BeautifulReport({ mcpData, mcpParams, propertyId, proper
   const dimensions = mcpParams?.dimensions || [];
   const rows = mcpData?.rows || [];
   const chartType = (mcpParams as any)?.parsed?.chartType;
+  const hasDateDimension = dimensions.includes('date');
   
   // Check if this is a comprehensive report
   const isComprehensive = !!comprehensiveData;
@@ -153,18 +168,18 @@ export default function BeautifulReport({ mcpData, mcpParams, propertyId, proper
   };
 
   // Get Font Awesome icon for metric
-  const getMetricIcon = (metric: string): string => {
-    const icons: Record<string, string> = {
-      sessions: 'fa-chart-line',
-      activeUsers: 'fa-users',
-      newUsers: 'fa-user-plus',
-      screenPageViews: 'fa-eye',
-      averageSessionDuration: 'fa-clock',
-      engagementRate: 'fa-heart',
-      bounceRate: 'fa-arrow-right',
-      eventCount: 'fa-bolt',
+  const getMetricIcon = (metric: string) => {
+    const icons: Record<string, any> = {
+      sessions: faChartLine,
+      activeUsers: faUsers,
+      newUsers: faUserPlus,
+      screenPageViews: faEye,
+      averageSessionDuration: faClock,
+      engagementRate: faHeart,
+      bounceRate: faArrowRight,
+      eventCount: faBolt,
     };
-    return icons[metric] || 'fa-chart-bar';
+    return icons[metric] || faChartBar;
   };
 
   // Get color for metric card (dark mode aware)
@@ -236,6 +251,129 @@ export default function BeautifulReport({ mcpData, mcpParams, propertyId, proper
           </div>
         </div>
       </div>
+
+      {/* Summary Tiles */}
+      {totals && Object.keys(totals).length > 0 && metrics.length > 0 && (
+        <div className={`p-6 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {metrics.map((metric: string, index: number) => {
+              const total = totals[metric] || 0;
+              const displayName = getMetricDisplayName(metric);
+              const icon = getMetricIcon(metric);
+              
+              // Calculate trend if we have date dimension and multiple rows
+              let trend: 'up' | 'down' | null = null;
+              let change = '';
+              
+              if (hasDateDimension && rows.length >= 2) {
+                const firstValue = parseFloat(rows[0]?.metric_values?.[index]?.value?.toString().replace(/,/g, '') || '0');
+                const lastValue = parseFloat(rows[rows.length - 1]?.metric_values?.[index]?.value?.toString().replace(/,/g, '') || '0');
+                
+                if (firstValue > 0) {
+                  const percentChange = ((lastValue - firstValue) / firstValue) * 100;
+                  trend = percentChange >= 0 ? 'up' : 'down';
+                  change = `${Math.abs(percentChange).toFixed(1)}%`;
+                }
+              }
+              
+              // Get color for icon background
+              const colorMap: Record<string, string> = {
+                sessions: 'blue',
+                activeUsers: 'purple',
+                newUsers: 'green',
+                screenPageViews: 'orange',
+                averageSessionDuration: 'indigo',
+                engagementRate: 'pink',
+                bounceRate: 'red',
+                eventCount: 'yellow',
+              };
+              const color = colorMap[metric] || 'gray';
+              
+              // Format value
+              const formattedValue = metric === 'averageSessionDuration' 
+                ? formatDuration(total)
+                : formatNumber(total);
+              
+              // Color styles for background and icon
+              const bgColorStyle = isDarkMode
+                ? (color === 'blue' ? { backgroundColor: 'rgba(30, 58, 138, 0.3)' } :
+                   color === 'purple' ? { backgroundColor: 'rgba(88, 28, 135, 0.3)' } :
+                   color === 'green' ? { backgroundColor: 'rgba(20, 83, 45, 0.3)' } :
+                   color === 'orange' ? { backgroundColor: 'rgba(154, 52, 18, 0.3)' } :
+                   color === 'indigo' ? { backgroundColor: 'rgba(55, 48, 163, 0.3)' } :
+                   color === 'pink' ? { backgroundColor: 'rgba(157, 23, 77, 0.3)' } :
+                   color === 'red' ? { backgroundColor: 'rgba(153, 27, 27, 0.3)' } :
+                   color === 'yellow' ? { backgroundColor: 'rgba(161, 98, 7, 0.3)' } :
+                   { backgroundColor: 'rgba(55, 65, 81, 0.3)' })
+                : (color === 'blue' ? { backgroundColor: '#dbeafe' } :
+                   color === 'purple' ? { backgroundColor: '#f3e8ff' } :
+                   color === 'green' ? { backgroundColor: '#dcfce7' } :
+                   color === 'orange' ? { backgroundColor: '#fed7aa' } :
+                   color === 'indigo' ? { backgroundColor: '#e0e7ff' } :
+                   color === 'pink' ? { backgroundColor: '#fce7f3' } :
+                   color === 'red' ? { backgroundColor: '#fee2e2' } :
+                   color === 'yellow' ? { backgroundColor: '#fef9c3' } :
+                   { backgroundColor: '#f3f4f6' });
+              
+              const iconColorStyle = isDarkMode
+                ? (color === 'blue' ? { color: '#93c5fd' } :
+                   color === 'purple' ? { color: '#c4b5fd' } :
+                   color === 'green' ? { color: '#86efac' } :
+                   color === 'orange' ? { color: '#fdba74' } :
+                   color === 'indigo' ? { color: '#a5b4fc' } :
+                   color === 'pink' ? { color: '#f9a8d4' } :
+                   color === 'red' ? { color: '#fca5a5' } :
+                   color === 'yellow' ? { color: '#fde047' } :
+                   { color: '#d1d5db' })
+                : (color === 'blue' ? { color: '#2563eb' } :
+                   color === 'purple' ? { color: '#9333ea' } :
+                   color === 'green' ? { color: '#16a34a' } :
+                   color === 'orange' ? { color: '#ea580c' } :
+                   color === 'indigo' ? { color: '#4f46e5' } :
+                   color === 'pink' ? { color: '#db2777' } :
+                   color === 'red' ? { color: '#dc2626' } :
+                   color === 'yellow' ? { color: '#ca8a04' } :
+                   { color: '#6b7280' });
+              
+              return (
+                <div
+                  key={index}
+                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        {displayName}
+                      </p>
+                      <p className="text-2xl text-gray-900 dark:text-gray-100 mb-1">
+                        {formattedValue}
+                      </p>
+                      {trend && change && (
+                        <div className={`flex items-center gap-1 text-sm ${
+                          trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          <FontAwesomeIcon 
+                            icon={trend === 'up' ? faArrowTrendUp : faArrowTrendDown} 
+                            className="w-3 h-3" 
+                          />
+                          <span>{change}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 rounded-lg" style={bgColorStyle}>
+                      <FontAwesomeIcon 
+                        icon={icon} 
+                        className="w-5 h-5"
+                        style={iconColorStyle}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Comprehensive Report Sections */}
       {isComprehensive && comprehensiveData && (

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const user = getUserByUsername(username);
+    const user = await getUserByUsername(username);
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
     const filterUsername = searchParams.get('username') || undefined;
     const limit = parseInt(searchParams.get('limit') || '100', 10);
 
-    const logs = getActivityLogs(filterUsername, limit);
-    const stats = getActivityStats();
+    const logs = await getActivityLogs(filterUsername, limit);
+    const stats = await getActivityStats();
 
     return NextResponse.json({
       logs,

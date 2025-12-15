@@ -3,17 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { GA4_PROPERTIES } from '@/lib/ga4-properties';
 import '@/styles/chat.css';
 
 interface User {
   username: string;
   role: string;
+  default_property_id?: string;
 }
 
 interface UserFormData {
   username: string;
   password: string;
   role: string;
+  default_property_id?: string;
 }
 
 export default function SettingsPage() {
@@ -30,6 +33,7 @@ export default function SettingsPage() {
     username: '',
     password: '',
     role: 'user',
+    default_property_id: '',
   });
 
   useEffect(() => {
@@ -152,6 +156,7 @@ export default function SettingsPage() {
           username: formData.username,
           password: formData.password,
           role: formData.role,
+          default_property_id: formData.default_property_id || null,
         }),
       });
 
@@ -163,7 +168,7 @@ export default function SettingsPage() {
 
       setSuccess('User created successfully');
       setShowCreateForm(false);
-      setFormData({ username: '', password: '', role: 'user' });
+      setFormData({ username: '', password: '', role: 'user', default_property_id: '' });
       await loadData();
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
@@ -177,9 +182,10 @@ export default function SettingsPage() {
       setError(null);
       setSuccess(null);
 
-      const updates: { password?: string; role?: string } = {};
+      const updates: { password?: string; role?: string; default_property_id?: string | null } = {};
       if (formData.password) updates.password = formData.password;
       if (formData.role) updates.role = formData.role;
+      if (formData.default_property_id !== undefined) updates.default_property_id = formData.default_property_id || null;
 
       if (Object.keys(updates).length === 0) {
         setError('No changes to save');
@@ -205,7 +211,7 @@ export default function SettingsPage() {
 
       setSuccess('User updated successfully');
       setEditingUser(null);
-      setFormData({ username: '', password: '', role: 'user' });
+      setFormData({ username: '', password: '', role: 'user', default_property_id: '' });
       await loadData();
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
@@ -248,12 +254,13 @@ export default function SettingsPage() {
       username: user.username,
       password: '',
       role: user.role,
+      default_property_id: user.default_property_id || '',
     });
   };
 
   const cancelEdit = () => {
     setEditingUser(null);
-    setFormData({ username: '', password: '', role: 'user' });
+    setFormData({ username: '', password: '', role: 'user', default_property_id: '' });
   };
 
   if (authLoading || loading) {
@@ -317,12 +324,12 @@ export default function SettingsPage() {
 
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Users</h2>
+              <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Users</h2>
               <button
                 onClick={() => {
                   setShowCreateForm(!showCreateForm);
                   setEditingUser(null);
-                  setFormData({ username: '', password: '', role: 'user' });
+                  setFormData({ username: '', password: '', role: 'user', default_property_id: '' });
                 }}
                 style={{
                   padding: '8px 16px',
@@ -343,16 +350,16 @@ export default function SettingsPage() {
 
             {showCreateForm && (
               <div style={{
-                background: 'var(--bg-secondary, #fff)',
+                background: '#ffffff',
                 borderRadius: '12px',
-                border: '1px solid var(--border-color, #e5e7eb)',
+                border: '1px solid #e5e7eb',
                 padding: '20px',
                 marginBottom: '16px',
               }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Create New User</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>Create New User</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                       Username
                     </label>
                     <input
@@ -362,15 +369,17 @@ export default function SettingsPage() {
                       style={{
                         width: '100%',
                         padding: '8px 12px',
-                        border: '1px solid var(--border-color, #e5e7eb)',
+                        border: '1px solid #e5e7eb',
                         borderRadius: '6px',
                         fontSize: '14px',
+                        color: '#1f2937',
+                        background: '#ffffff',
                       }}
                       placeholder="Enter username"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                       Password
                     </label>
                     <input
@@ -380,15 +389,17 @@ export default function SettingsPage() {
                       style={{
                         width: '100%',
                         padding: '8px 12px',
-                        border: '1px solid var(--border-color, #e5e7eb)',
+                        border: '1px solid #e5e7eb',
                         borderRadius: '6px',
                         fontSize: '14px',
+                        color: '#1f2937',
+                        background: '#ffffff',
                       }}
                       placeholder="Enter password (min 8 characters)"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                       Role
                     </label>
                     <select
@@ -397,13 +408,40 @@ export default function SettingsPage() {
                       style={{
                         width: '100%',
                         padding: '8px 12px',
-                        border: '1px solid var(--border-color, #e5e7eb)',
+                        border: '1px solid #e5e7eb',
                         borderRadius: '6px',
                         fontSize: '14px',
+                        color: '#1f2937',
+                        background: '#ffffff',
                       }}
                     >
                       <option value="user">User</option>
                       <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                      Default Property
+                    </label>
+                    <select
+                      value={formData.default_property_id || ''}
+                      onChange={(e) => setFormData({ ...formData, default_property_id: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        color: '#1f2937',
+                        background: '#ffffff',
+                      }}
+                    >
+                      <option value="">None (use first property)</option>
+                      {GA4_PROPERTIES.map((prop) => (
+                        <option key={prop.id} value={prop.id}>
+                          {prop.name} ({prop.id})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <button
@@ -429,23 +467,23 @@ export default function SettingsPage() {
             )}
 
             <div style={{
-              background: 'var(--bg-secondary, #fff)',
+              background: '#ffffff',
               borderRadius: '12px',
-              border: '1px solid var(--border-color, #e5e7eb)',
+              border: '1px solid #e5e7eb',
               overflow: 'hidden',
             }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: 'var(--bg-tertiary, #f9fafb)', borderBottom: '2px solid var(--border-color, #e5e7eb)' }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600' }}>Username</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600' }}>Role</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600' }}>Actions</th>
+                  <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Username</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Role</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((user, index) => (
-                    <tr key={user.username} style={{ borderBottom: index < users.length - 1 ? '1px solid var(--border-color, #e5e7eb)' : 'none' }}>
-                      <td style={{ padding: '12px 16px' }}>
+                    <tr key={user.username} style={{ borderBottom: index < users.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                      <td style={{ padding: '12px 16px', color: '#1f2937' }}>
                         {editingUser === user.username ? (
                           <input
                             type="text"
@@ -453,10 +491,11 @@ export default function SettingsPage() {
                             disabled
                             style={{
                               padding: '4px 8px',
-                              border: '1px solid var(--border-color, #e5e7eb)',
+                              border: '1px solid #e5e7eb',
                               borderRadius: '4px',
                               fontSize: '14px',
                               background: '#f3f4f6',
+                              color: '#1f2937',
                             }}
                           />
                         ) : (
@@ -470,9 +509,11 @@ export default function SettingsPage() {
                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             style={{
                               padding: '4px 8px',
-                              border: '1px solid var(--border-color, #e5e7eb)',
+                              border: '1px solid #e5e7eb',
                               borderRadius: '4px',
                               fontSize: '12px',
+                              color: '#1f2937',
+                              background: '#ffffff',
                             }}
                           >
                             <option value="user">user</option>
@@ -491,6 +532,34 @@ export default function SettingsPage() {
                           </span>
                         )}
                       </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {editingUser === user.username ? (
+                          <select
+                            value={formData.default_property_id || ''}
+                            onChange={(e) => setFormData({ ...formData, default_property_id: e.target.value })}
+                            style={{
+                              padding: '4px 8px',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              color: '#1f2937',
+                              background: '#ffffff',
+                              width: '200px',
+                            }}
+                          >
+                            <option value="">None</option>
+                            {GA4_PROPERTIES.map((prop) => (
+                              <option key={prop.id} value={prop.id}>
+                                {prop.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                            {user.default_property_id ? GA4_PROPERTIES.find(p => p.id === user.default_property_id)?.name || user.default_property_id : 'None'}
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         {editingUser === user.username ? (
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -501,10 +570,12 @@ export default function SettingsPage() {
                               placeholder="New password (optional)"
                               style={{
                                 padding: '4px 8px',
-                                border: '1px solid var(--border-color, #e5e7eb)',
+                                border: '1px solid #e5e7eb',
                                 borderRadius: '4px',
                                 fontSize: '12px',
                                 width: '150px',
+                                color: '#1f2937',
+                                background: '#ffffff',
                               }}
                             />
                             <button
@@ -608,14 +679,14 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px' }}>Global Actions</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>Global Actions</h2>
             <div style={{
-              background: 'var(--bg-secondary, #fff)',
+              background: '#ffffff',
               borderRadius: '12px',
-              border: '1px solid var(--border-color, #e5e7eb)',
+              border: '1px solid #e5e7eb',
               padding: '20px',
             }}>
-              <p style={{ marginBottom: '16px', color: 'var(--text-secondary, #6b7280)' }}>
+              <p style={{ marginBottom: '16px', color: '#6b7280' }}>
                 Invalidate all active sessions for all users. This will force everyone to log in again.
               </p>
               <button

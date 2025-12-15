@@ -17,7 +17,7 @@ export interface QueryResult {
  * Note: In a production environment, this would need to be connected to
  * an actual MCP client or API that can execute MCP tool calls.
  */
-export async function processGA4Query(prompt: string): Promise<QueryResult> {
+export async function processGA4Query(prompt: string, defaultPropertyId?: string): Promise<QueryResult> {
   const lowerPrompt = prompt.toLowerCase().trim();
 
   // Handle "list properties" or "list all properties" queries
@@ -82,7 +82,7 @@ export async function processGA4Query(prompt: string): Promise<QueryResult> {
                         hasSpecificPattern;
   
   if (isReportQuery || lowerPrompt.includes('report') || (lowerPrompt.includes('data') && lowerPrompt.includes('property'))) {
-    const reportResult = await handleReportQuery(prompt);
+    const reportResult = await handleReportQuery(prompt, defaultPropertyId);
     return {
       result: reportResult.result,
       data: { 
@@ -193,18 +193,45 @@ async function handlePropertyDetails(prompt: string): Promise<string> {
   return `To get property details, I would need:\n1. The property ID from your query\n2. Call mcp_analytics-mcp_get_property_details(property_id)\n\nPlease specify which property you'd like details for.`;
 }
 
-async function handleReportQuery(prompt: string): Promise<{ result: string; mcpParams?: any; parsed?: any }> {
+async function handleReportQuery(prompt: string, defaultPropertyId?: string): Promise<{ result: string; mcpParams?: any; parsed?: any }> {
   try {
     // Use LLM to extract parameters from natural language
     const { extractGA4Params, formatMCPParams } = await import('./ga4-llm-service');
     
     console.log('🤖 Using LLM to extract GA4 parameters from:', prompt);
+    console.log('🏠 Default property ID:', defaultPropertyId);
     
     // Extract parameters using LLM
     const extractedParams = await extractGA4Params(prompt);
     
-    // Log extracted parameters
-    console.log('🔍 LLM extracted parameters:', JSON.stringify(extractedParams, null, 2));
+    // Check if user explicitly mentioned a property ID or property name in the prompt
+    const promptLower = prompt.toLowerCase();
+    const hasExplicitPropertyId = /\b(\d{9,})\b/.test(prompt);
+    const hasExplicitPropertyName = /\b(independent|arabnews|asharq|sayidaty|hia|manga|srmg)\s+(arabic|english|all)?/i.test(prompt);
+    const hasExplicitProperty = hasExplicitPropertyId || hasExplicitPropertyName;
+    
+    // Always override with defaultPropertyId unless user explicitly specified a property
+    // IMPORTANT: The LLM always returns a property_id (defaults to "358809672"), so we must
+    // explicitly override it when defaultPropertyId is provided and user didn't specify one
+    if (defaultPropertyId) {
+      if (!hasExplicitProperty) {
+        // User didn't specify a property, FORCE use the selected/default one
+        // This overrides whatever the LLM returned
+        extractedParams.property_id = defaultPropertyId;
+        console.log('✅ FORCING override with selected/default property ID:', defaultPropertyId);
+        console.log('   (LLM had returned:', extractedParams.property_id, ')');
+      } else {
+        // User explicitly mentioned a property, use that instead
+        console.log('✅ User specified property in query, using:', extractedParams.property_id);
+      }
+    } else if (!hasExplicitProperty) {
+      // No default property and no explicit property - LLM will use its default
+      console.log('⚠️ No default property set, using LLM default:', extractedParams.property_id);
+    }
+    
+    // Log extracted parameters AFTER override
+    console.log('🔍 Final extracted parameters (after override):', JSON.stringify(extractedParams, null, 2));
+    console.log('🔍 Property ID that will be used:', extractedParams.property_id);
     
     // Check if this is a comprehensive report request
     if (extractedParams.isComprehensiveReport) {
@@ -212,12 +239,12 @@ async function handleReportQuery(prompt: string): Promise<{ result: string; mcpP
       return {
         result: `📊 **Comprehensive Report Request Detected**\n\nGenerating full breakdown with multiple sections...`,
         mcpParams: {
-          property_id: extractedParams.property_id || '358809672',
+          property_id: extractedParams.property_id || defaultPropertyId || '358809672',
           date_ranges: extractedParams.date_ranges || [{ start_date: '30daysAgo', end_date: 'yesterday', name: 'Last30Days' }],
           isComprehensiveReport: true,
         },
         parsed: {
-          propertyId: String(extractedParams.property_id || '358809672'),
+          propertyId: String(extractedParams.property_id || defaultPropertyId || '358809672'),
           dateRanges: extractedParams.date_ranges || [{ start_date: '30daysAgo', end_date: 'yesterday', name: 'Last30Days' }],
           isComprehensiveReport: true,
         },
@@ -225,7 +252,8 @@ async function handleReportQuery(prompt: string): Promise<{ result: string; mcpP
     }
     
     // Format to MCP-ready parameters with smart defaults
-    const mcpParams = formatMCPParams(extractedParams, prompt);
+    // Pass defaultPropertyId to ensure it's used (extractedParams.property_id already updated above)
+    const mcpParams = formatMCPParams(extractedParams, prompt, defaultPropertyId);
     
     // Log final MCP parameters
     console.log('📤 Final MCP parameters:', JSON.stringify(mcpParams, null, 2));
@@ -318,7 +346,7 @@ function extractFilterInfo(filter: any): string | null {
 /**
  * Parses a natural language query to extract report parameters
  */
-function parseReportQuery(prompt: string): {
+function parseReportQuery(prompt: string, defaultPropertyId?: string): {
   propertyId?: string;
   propertyName?: string;
   dateRanges?: Array<{ start_date: string; end_date: string; name: string }>;
@@ -358,7 +386,7 @@ function parseReportQuery(prompt: string): {
   
   // Set default property ID if none found
   if (!result.propertyId) {
-    result.propertyId = '358809672';
+    result.propertyId = defaultPropertyId || '358809672';
   }
 
   // First, try to extract absolute date ranges (e.g., "1/8/2025 till 31/8/2025")

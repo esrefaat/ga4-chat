@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { AUTH_CONFIG, isSessionValid, getUsernameFromToken, getUserByUsername, createUser, updateUser, deleteUser } from '@/lib/auth';
+import { AUTH_CONFIG, isSessionValid, getUsernameFromToken, getUserByUsername, createUser, updateUser, deleteUser, getAllUsers } from '@/lib/auth';
+import { logActivity } from '@/lib/activity-logger';
 
 /**
  * GET /api/users - Get all users (Admin only)
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const user = getUserByUsername(username);
+    const user = await getUserByUsername(username);
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
@@ -34,11 +35,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Return users without passwords
-    const users = AUTH_CONFIG.users.map(({ password, ...user }) => ({
-      ...user,
-      role: user.role || 'user',
-    }));
+    // Get all users from database
+    const users = await getAllUsers();
 
     return NextResponse.json({
       users,
@@ -76,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const user = getUserByUsername(username);
+    const user = await getUserByUsername(username);
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username: newUsername, password, role } = body;
+    const { username: newUsername, password, role, default_property_id } = body;
 
     if (!newUsername || !password) {
       return NextResponse.json(
@@ -94,13 +92,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = createUser(newUsername, password, role || 'user');
+    const result = await createUser(newUsername, password, role || 'user', default_property_id);
     if (!result.success) {
       return NextResponse.json(
         { error: result.error },
         { status: 400 }
       );
     }
+
+    await logActivity(username, 'USER_CREATED', { newUsername, role: role || 'user' }, {
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    });
 
     return NextResponse.json({
       success: true,
@@ -139,7 +142,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if user is admin
-    const user = getUserByUsername(username);
+    const user = await getUserByUsername(username);
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
@@ -148,7 +151,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username: targetUsername, password, role } = body;
+    const { username: targetUsername, password, role, default_property_id } = body;
 
     if (!targetUsername) {
       return NextResponse.json(
@@ -157,9 +160,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updates: { password?: string; role?: string } = {};
+    const updates: { password?: string; role?: string; default_property_id?: string } = {};
     if (password !== undefined) updates.password = password;
     if (role !== undefined) updates.role = role;
+    if (default_property_id !== undefined) updates.default_property_id = default_property_id;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
@@ -168,13 +172,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const result = updateUser(targetUsername, updates);
+    const result = await updateUser(targetUsername, updates);
     if (!result.success) {
       return NextResponse.json(
         { error: result.error },
         { status: 400 }
       );
     }
+
+    await logActivity(username, 'USER_UPDATED', { targetUsername, updates }, {
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    });
 
     return NextResponse.json({
       success: true,
@@ -213,7 +222,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if user is admin
-    const user = getUserByUsername(username);
+    const user = await getUserByUsername(username);
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
@@ -239,13 +248,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const result = deleteUser(targetUsername);
+    const result = await deleteUser(targetUsername);
     if (!result.success) {
       return NextResponse.json(
         { error: result.error },
         { status: 400 }
       );
     }
+
+    await logActivity(username, 'USER_DELETED', { targetUsername }, {
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    });
 
     return NextResponse.json({
       success: true,

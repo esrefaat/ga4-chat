@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCurrentUser } from './useCurrentUser';
 
 export interface ChartData {
   date?: string;
@@ -22,6 +23,7 @@ export interface Message {
 }
 
 export function useGA4Chat() {
+  const { user } = useCurrentUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,6 +67,9 @@ export function useGA4Chat() {
         },
         body: JSON.stringify({ 
           prompt,
+          propertyId: user?.username 
+            ? localStorage.getItem(`ga4_selected_property_id_${user.username}`) || undefined
+            : undefined,
           timestamp: Date.now(), // Add timestamp to ensure unique request
         }),
         cache: 'no-store', // Disable caching

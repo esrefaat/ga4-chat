@@ -1,58 +1,19 @@
 /**
  * Authentication configuration
  * 
- * Credentials are stored here. For production, use environment variables.
+ * Uses PostgreSQL for user management persistence.
  */
+
+import { query } from './db';
 
 export interface User {
   username: string;
   password: string;
   role?: string;
-}
-
-// Default users (can be overridden by environment variables)
-const DEFAULT_USERS: User[] = [
-  {
-    username: 'admin',
-    password: 'Admin@GA4Chat2024!NewPass',
-    role: 'admin',
-  },
-  {
-    username: 'user1',
-    password: 'User1@GA4Chat2024!Secure',
-    role: 'user',
-  },
-  {
-    username: 'user2',
-    password: 'User2@GA4Chat2024!Secure',
-    role: 'user',
-  },
-  {
-    username: 'user3',
-    password: 'User3@GA4Chat2024!Secure',
-    role: 'user',
-  },
-  {
-    username: 'm.hani',
-    password: 'Mhani@GA4Chat2024!Secure',
-    role: 'user',
-  },
-];
-
-// Parse users from environment variable (JSON format) or use defaults
-function getUsers(): User[] {
-  if (process.env.AUTH_USERS) {
-    try {
-      return JSON.parse(process.env.AUTH_USERS);
-    } catch (error) {
-      console.error('Failed to parse AUTH_USERS, using defaults');
-    }
-  }
-  return DEFAULT_USERS;
+  default_property_id?: string;
 }
 
 export const AUTH_CONFIG = {
-  users: getUsers(),
   sessionCookieName: 'ga4-chat-auth',
   sessionMaxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
 };
@@ -79,13 +40,19 @@ export function invalidateUserSessions(username: string): void {
 /**
  * Invalidates all sessions (global logout)
  */
-export function invalidateAllSessions(): void {
+export async function invalidateAllSessions(): Promise<void> {
   sessionBlacklist.clear();
   userSessionBlacklist.clear();
-  // Set a timestamp for all users
-  AUTH_CONFIG.users.forEach((user) => {
-    userSessionBlacklist.set(user.username, Date.now());
-  });
+  
+  // Set a timestamp for all users from database
+  try {
+    const users = await getAllUsers();
+    users.forEach((user) => {
+      userSessionBlacklist.set(user.username, Date.now());
+    });
+  } catch (error) {
+    console.error('Failed to get users for session invalidation:', error);
+  }
 }
 
 /**
@@ -121,24 +88,85 @@ export function isSessionValid(token: string): boolean {
 /**
  * Validates login credentials
  */
-export function validateCredentials(username: string, password: string): User | null {
-  const user = AUTH_CONFIG.users.find(
-    (u) => u.username === username && u.password === password
-  );
-  return user || null;
+export async function validateCredentials(username: string, password: string): Promise<User | null> {
+  try {
+    const result = await query<User>(
+      'SELECT username, password, role, default_property_id FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const user = result.rows[0];
+    if (user.password === password) {
+      return {
+        username: user.username,
+        password: user.password,
+        role: user.role || 'user',
+        default_property_id: user.default_property_id || undefined,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to validate credentials:', error);
+    return null;
+  }
 }
 
 /**
  * Get user by username
  */
-export function getUserByUsername(username: string): User | undefined {
-  return AUTH_CONFIG.users.find((u) => u.username === username);
+export async function getUserByUsername(username: string): Promise<User | undefined> {
+  try {
+    const result = await query<User>(
+      'SELECT username, password, role, default_property_id FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+
+    const user = result.rows[0];
+    return {
+      username: user.username,
+      password: user.password,
+      role: user.role || 'user',
+      default_property_id: user.default_property_id || undefined,
+    };
+  } catch (error) {
+    console.error('Failed to get user by username:', error);
+    return undefined;
+  }
+}
+
+/**
+ * Get all users (without passwords)
+ */
+export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
+  try {
+    const result = await query<{ username: string; role: string; default_property_id?: string }>(
+      'SELECT username, role, default_property_id FROM users ORDER BY username'
+    );
+
+    return result.rows.map((row) => ({
+      username: row.username,
+      role: row.role || 'user',
+      default_property_id: row.default_property_id || undefined,
+    }));
+  } catch (error) {
+    console.error('Failed to get all users:', error);
+    return [];
+  }
 }
 
 /**
  * Create a new user
  */
-export function createUser(username: string, password: string, role: string = 'user'): { success: boolean; error?: string } {
+export async function createUser(username: string, password: string, role: string = 'user', default_property_id?: string): Promise<{ success: boolean; error?: string }> {
   // Validate username
   if (!username || username.trim().length === 0) {
     return { success: false, error: 'Username is required' };
@@ -149,76 +177,126 @@ export function createUser(username: string, password: string, role: string = 'u
     return { success: false, error: 'Password must be at least 8 characters' };
   }
 
-  // Check if user already exists
-  if (getUserByUsername(username)) {
-    return { success: false, error: 'Username already exists' };
-  }
-
   // Validate role
   if (role !== 'admin' && role !== 'user') {
     return { success: false, error: 'Role must be "admin" or "user"' };
   }
 
-  // Add user
-  AUTH_CONFIG.users.push({
-    username: username.trim(),
-    password,
-    role,
-  });
+  try {
+    // Check if user already exists
+    const existingUser = await getUserByUsername(username.trim());
+    if (existingUser) {
+      return { success: false, error: 'Username already exists' };
+    }
 
-  return { success: true };
+    // Insert user into database
+    await query(
+      'INSERT INTO users (username, password, role, default_property_id) VALUES ($1, $2, $3, $4)',
+      [username.trim(), password, role, default_property_id || null]
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to create user:', error);
+    if (error.code === '23505') { // Unique violation
+      return { success: false, error: 'Username already exists' };
+    }
+    return { success: false, error: 'Failed to create user' };
+  }
 }
 
 /**
  * Update an existing user
  */
-export function updateUser(username: string, updates: { password?: string; role?: string }): { success: boolean; error?: string } {
-  const user = getUserByUsername(username);
-  if (!user) {
-    return { success: false, error: 'User not found' };
+export async function updateUser(username: string, updates: { password?: string; role?: string; default_property_id?: string | null }): Promise<{ success: boolean; error?: string }> {
+  // Validate password if provided
+  if (updates.password !== undefined && updates.password.length < 8) {
+    return { success: false, error: 'Password must be at least 8 characters' };
   }
 
-  // Update password if provided
-  if (updates.password !== undefined) {
-    if (updates.password.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters' };
+  // Validate role if provided
+  if (updates.role !== undefined && updates.role !== 'admin' && updates.role !== 'user') {
+    return { success: false, error: 'Role must be "admin" or "user"' };
+  }
+
+  try {
+    // Check if user exists
+    const user = await getUserByUsername(username);
+    if (!user) {
+      return { success: false, error: 'User not found' };
     }
-    user.password = updates.password;
-  }
 
-  // Update role if provided
-  if (updates.role !== undefined) {
-    if (updates.role !== 'admin' && updates.role !== 'user') {
-      return { success: false, error: 'Role must be "admin" or "user"' };
+    // Build update query dynamically
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (updates.password !== undefined) {
+      updateFields.push(`password = $${paramIndex++}`);
+      values.push(updates.password);
     }
-    user.role = updates.role;
-  }
 
-  return { success: true };
+    if (updates.role !== undefined) {
+      updateFields.push(`role = $${paramIndex++}`);
+      values.push(updates.role);
+    }
+
+    if (updates.default_property_id !== undefined) {
+      updateFields.push(`default_property_id = $${paramIndex++}`);
+      values.push(updates.default_property_id || null);
+    }
+
+    if (updateFields.length === 0) {
+      return { success: false, error: 'No fields to update' };
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+    values.push(username);
+
+    await query(
+      `UPDATE users SET ${updateFields.join(', ')} WHERE username = $${paramIndex}`,
+      values
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update user:', error);
+    return { success: false, error: 'Failed to update user' };
+  }
 }
 
 /**
  * Delete a user
  */
-export function deleteUser(username: string): { success: boolean; error?: string } {
-  const userIndex = AUTH_CONFIG.users.findIndex((u) => u.username === username);
-  if (userIndex === -1) {
-    return { success: false, error: 'User not found' };
+export async function deleteUser(username: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Check if user exists
+    const user = await getUserByUsername(username);
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    // Prevent deleting the last admin user
+    const adminUsersResult = await query<{ count: string }>(
+      "SELECT COUNT(*) as count FROM users WHERE role = 'admin'"
+    );
+    const adminCount = parseInt(adminUsersResult.rows[0]?.count || '0', 10);
+
+    if (user.role === 'admin' && adminCount === 1) {
+      return { success: false, error: 'Cannot delete the last admin user' };
+    }
+
+    // Invalidate user sessions before deletion
+    invalidateUserSessions(username);
+
+    // Delete user from database
+    await query('DELETE FROM users WHERE username = $1', [username]);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete user:', error);
+    return { success: false, error: 'Failed to delete user' };
   }
-
-  // Prevent deleting the last admin user
-  const adminUsers = AUTH_CONFIG.users.filter((u) => u.role === 'admin');
-  if (userIndex !== -1 && AUTH_CONFIG.users[userIndex].role === 'admin' && adminUsers.length === 1) {
-    return { success: false, error: 'Cannot delete the last admin user' };
-  }
-
-  // Invalidate user sessions before deletion
-  invalidateUserSessions(username);
-
-  // Remove user
-  AUTH_CONFIG.users.splice(userIndex, 1);
-
-  return { success: true };
 }
 
 /**

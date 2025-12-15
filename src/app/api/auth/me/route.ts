@@ -25,7 +25,7 @@ export async function GET() {
       );
     }
 
-    const user = getUserByUsername(username);
+    const user = await getUserByUsername(username);
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -36,6 +36,7 @@ export async function GET() {
     return NextResponse.json({
       username: user.username,
       role: user.role || 'user',
+      default_property_id: user.default_property_id || null,
     });
   } catch (error) {
     return NextResponse.json(

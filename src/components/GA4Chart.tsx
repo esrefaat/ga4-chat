@@ -1,35 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
-  Filler,
-} from 'chart.js';
-import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+  ResponsiveContainer,
+} from 'recharts';
 import { useTheme } from '@/contexts/ThemeContext';
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
 
 export interface ChartData {
   date?: string;
@@ -112,9 +99,9 @@ export default function GA4Chart({ data, metrics, dimensions, chartType }: GA4Ch
   // Determine X-axis data key (use first dimension, or 'date' if available)
   const xAxisKey = dimensions.includes('date') ? 'date' : dimensions[0] || 'date';
   
-  // Prepare data for chart
+  // Prepare data for Recharts (array of objects format)
   const chartData = data.map((row) => {
-    const formattedRow: ChartData = {};
+    const formattedRow: Record<string, any> = {};
     
     // Add dimensions - use the first dimension as the primary key for X-axis
     dimensions.forEach((dim, index) => {
@@ -139,214 +126,237 @@ export default function GA4Chart({ data, metrics, dimensions, chartType }: GA4Ch
     metrics.forEach((metric) => {
       const metricKey = `metric_${metric}`;
       const value = row[metricKey] || row[metric] || 0;
-      formattedRow[formatMetricName(metric)] = typeof value === 'string' ? parseFloat(value) || 0 : value;
+      const metricName = formatMetricName(metric);
+      formattedRow[metricName] = typeof value === 'string' ? parseFloat(value) || 0 : value;
     });
     
     return formattedRow;
   });
 
-  // Extract labels (X-axis) and datasets
-  const labels = chartData.map(row => String(row[xAxisKey] || ''));
-  
   // Enhanced color palette
   const colors = [
-    { border: '#3B82F6', background: 'rgba(59, 130, 246, 0.1)' }, // Blue
-    { border: '#10B981', background: 'rgba(16, 185, 129, 0.1)' }, // Green
-    { border: '#F59E0B', background: 'rgba(245, 158, 11, 0.1)' }, // Amber
-    { border: '#EF4444', background: 'rgba(239, 68, 68, 0.1)' }, // Red
-    { border: '#8B5CF6', background: 'rgba(139, 92, 246, 0.1)' }, // Purple
-    { border: '#06B6D4', background: 'rgba(6, 182, 212, 0.1)' }, // Cyan
-    { border: '#EC4899', background: 'rgba(236, 72, 153, 0.1)' }, // Pink
-    { border: '#14B8A6', background: 'rgba(20, 184, 166, 0.1)' }, // Teal
+    '#3B82F6', // Blue
+    '#10B981', // Green
+    '#F59E0B', // Amber
+    '#EF4444', // Red
+    '#8B5CF6', // Purple
+    '#06B6D4', // Cyan
+    '#EC4899', // Pink
+    '#14B8A6', // Teal
   ];
 
-  const datasets = metrics.map((metric, index) => {
-    const metricName = formatMetricName(metric);
-    const color = colors[index % colors.length];
-    
-    // Adjust colors for dark mode - use brighter, more vibrant colors
-    const borderColor = isDarkMode ? color.border : color.border;
-    const backgroundColor = finalChartType === 'line' 
-      ? (isDarkMode ? color.border + '20' : color.background) // 20 = ~12% opacity in hex
-      : color.border;
-    
-    return {
-      label: metricName,
-      data: chartData.map(row => row[metricName] as number || 0),
-      borderColor: borderColor,
-      backgroundColor: backgroundColor,
-      borderWidth: 3,
-      fill: finalChartType === 'line',
-      tension: 0.4, // Smooth curves for line charts
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      pointBackgroundColor: isDarkMode ? '#ffffff' : color.border, // White markers in dark mode
-      pointBorderColor: isDarkMode ? borderColor : '#fff', // Blue border in dark mode
-      pointBorderWidth: 2,
-    };
-  });
-
-  const chartDataConfig = {
-    labels,
-    datasets,
+  // Format Y-axis tick values
+  const formatYAxisTick = (value: number): string => {
+    if (value >= 1000000) {
+      return (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+      return (value / 1000).toFixed(1) + 'K';
+    }
+    return value.toString();
   };
 
-  // Dark mode color scheme
+  // Theme colors
   const textColor = isDarkMode ? '#cbd5e1' : '#6B7280';
   const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#F3F4F6';
-  const borderColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#E5E7EB';
   const tooltipBg = isDarkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)';
   const tooltipText = isDarkMode ? '#f1f5f9' : '#111827';
-  const tooltipBody = isDarkMode ? '#cbd5e1' : '#374151';
   const tooltipBorder = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#E5E7EB';
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: {
-            size: 12,
-            weight: 500,
-          },
-          color: textColor,
-        },
-      },
-      tooltip: {
-        backgroundColor: tooltipBg,
-        titleColor: tooltipText,
-        bodyColor: tooltipBody,
-        borderColor: tooltipBorder,
-        borderWidth: 1,
-        padding: 12,
-        displayColors: true,
-        callbacks: {
-          label: function(context: any) {
-            const value = context.parsed.y || context.parsed;
-            return `${context.dataset.label}: ${typeof value === 'number' ? value.toLocaleString() : value}`;
-          },
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: isDarkMode, // Show grid in dark mode
-          color: gridColor,
-          borderDash: isDarkMode ? [5, 5] : undefined, // Dashed lines in dark mode
-        },
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45,
-          font: {
-            size: 11,
-          },
-          color: textColor,
-        },
-        border: {
-          color: borderColor,
-        },
-      },
-      y: {
-        grid: {
-          color: gridColor,
-          borderDash: isDarkMode ? [5, 5] : undefined, // Dashed lines in dark mode
-          drawBorder: false,
-        },
-        ticks: {
-          font: {
-            size: 11,
-          },
-          color: textColor,
-          callback: function(value: any) {
-            if (value >= 1000000) {
-              return (value / 1000000).toFixed(1) + 'M';
-            } else if (value >= 1000) {
-              return (value / 1000).toFixed(1) + 'K';
-            }
-            return value;
-          },
-        },
-        border: {
-          color: borderColor,
-        },
-      },
-    },
-    animation: {
-      duration: 1000,
-      easing: 'easeInOutQuart' as const,
-    },
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          style={{
+            backgroundColor: tooltipBg,
+            border: `1px solid ${tooltipBorder}`,
+            borderRadius: '8px',
+            padding: '12px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          }}
+        >
+          <p style={{ color: tooltipText, fontWeight: 600, marginBottom: '8px' }}>
+            {label}
+          </p>
+          {payload.map((entry: any, index: number) => (
+            <p
+              key={index}
+              style={{
+                color: entry.color,
+                margin: '4px 0',
+                fontSize: '14px',
+              }}
+            >
+              {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
-  // Prepare pie/doughnut chart data (single metric, categorical dimension)
-  const pieChartData = finalChartType === 'pie' || finalChartType === 'doughnut' ? {
-    labels: labels,
-    datasets: [{
-      label: formatMetricName(metrics[0]),
-      data: chartData.map(row => row[formatMetricName(metrics[0])] as number || 0),
-      backgroundColor: colors.map(c => c.border),
-      borderColor: isDarkMode ? '#1e293b' : '#ffffff', // Dark border in dark mode
-      borderWidth: 2,
-    }],
-  } : null;
+  // Render Line Chart
+  if (finalChartType === 'line') {
+    return (
+      <div className="h-[400px] w-full min-h-[400px]">
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis
+              dataKey={xAxisKey}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              tick={{ fill: textColor, fontSize: 11 }}
+              stroke={gridColor}
+            />
+            <YAxis
+              tick={{ fill: textColor, fontSize: 11 }}
+              tickFormatter={formatYAxisTick}
+              stroke={gridColor}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ paddingTop: '20px' }}
+              iconType="line"
+              formatter={(value) => <span style={{ color: textColor, fontSize: 12 }}>{value}</span>}
+            />
+            {metrics.map((metric, index) => {
+              const metricName = formatMetricName(metric);
+              return (
+                <Line
+                  key={metricName}
+                  type="monotone"
+                  dataKey={metricName}
+                  stroke={colors[index % colors.length]}
+                  strokeWidth={3}
+                  dot={{ fill: isDarkMode ? '#ffffff' : colors[index % colors.length], r: 4 }}
+                  activeDot={{ r: 6 }}
+                  fill={colors[index % colors.length]}
+                  fillOpacity={0.1}
+                />
+              );
+            })}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
 
-  // Pie/Doughnut specific options
-  const pieChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: {
-            size: 12,
-            weight: 500,
-          },
-          color: textColor,
-        },
-      },
-      tooltip: {
-        backgroundColor: tooltipBg,
-        titleColor: tooltipText,
-        bodyColor: tooltipBody,
-        borderColor: tooltipBorder,
-        borderWidth: 1,
-        padding: 12,
-        callbacks: {
-          label: function(context: any) {
-            const label = context.label || '';
-            const value = context.parsed || 0;
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-            return `${label}: ${value.toLocaleString()} (${percentage}%)`;
-          },
-        },
-      },
-    },
-    animation: {
-      animateRotate: true,
-      animateScale: true,
-      duration: 1000,
-    },
-  };
+  // Render Bar Chart
+  if (finalChartType === 'bar') {
+    return (
+      <div className="h-[400px] w-full min-h-[400px]">
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <XAxis
+              dataKey={xAxisKey}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              tick={{ fill: textColor, fontSize: 11 }}
+              stroke={gridColor}
+            />
+            <YAxis
+              tick={{ fill: textColor, fontSize: 11 }}
+              tickFormatter={formatYAxisTick}
+              stroke={gridColor}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ paddingTop: '20px' }}
+              formatter={(value) => <span style={{ color: textColor, fontSize: 12 }}>{value}</span>}
+            />
+            {metrics.map((metric, index) => {
+              const metricName = formatMetricName(metric);
+              return (
+                <Bar
+                  key={metricName}
+                  dataKey={metricName}
+                  fill={colors[index % colors.length]}
+                  radius={[4, 4, 0, 0]}
+                />
+              );
+            })}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
 
-  return (
-    <div className="h-[400px] w-full">
-      {finalChartType === 'line' ? (
-        <Line data={chartDataConfig} options={chartOptions} />
-      ) : finalChartType === 'bar' ? (
-        <Bar data={chartDataConfig} options={chartOptions} />
-      ) : finalChartType === 'pie' ? (
-        <Pie data={pieChartData!} options={pieChartOptions} />
-      ) : (
-        <Doughnut data={pieChartData!} options={pieChartOptions} />
-      )}
-    </div>
-  );
+  // Render Pie/Doughnut Chart
+  if (finalChartType === 'pie' || finalChartType === 'doughnut') {
+    const pieData = chartData.map((row, index) => ({
+      name: String(row[xAxisKey] || `Item ${index + 1}`),
+      value: row[formatMetricName(metrics[0])] as number || 0,
+    }));
+
+    const total = pieData.reduce((sum, item) => sum + item.value, 0);
+
+    // Custom label for pie chart
+    const renderLabel = (entry: any) => {
+      const percent = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
+      return `${entry.name}: ${entry.value.toLocaleString()} (${percent}%)`;
+    };
+
+    return (
+      <div className="h-[400px] w-full min-h-[400px]">
+        <ResponsiveContainer width="100%" height={400}>
+          <PieChart>
+            <Pie
+              data={pieData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={renderLabel}
+              outerRadius={finalChartType === 'doughnut' ? 100 : 120}
+              innerRadius={finalChartType === 'doughnut' ? 60 : 0}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {pieData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0];
+                  const percent = total > 0 ? ((data.value as number / total) * 100).toFixed(1) : 0;
+                  return (
+                    <div
+                      style={{
+                        backgroundColor: tooltipBg,
+                        border: `1px solid ${tooltipBorder}`,
+                        borderRadius: '8px',
+                        padding: '12px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      }}
+                    >
+                      <p style={{ color: tooltipText, fontWeight: 600, marginBottom: '4px' }}>
+                        {data.name}
+                      </p>
+                      <p style={{ color: data.payload.fill, margin: 0, fontSize: '14px' }}>
+                        {formatMetricName(metrics[0])}: {data.value?.toLocaleString()} ({percent}%)
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              height={36}
+              formatter={(value) => <span style={{ color: textColor, fontSize: 12 }}>{value}</span>}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  return null;
 }

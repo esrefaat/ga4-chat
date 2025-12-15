@@ -9,6 +9,7 @@ import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import SavedQuestions from '@/components/SavedQuestions';
 import ThemeToggle from '@/components/ThemeToggle';
+import PropertySwitcher from '@/components/PropertySwitcher';
 import Link from 'next/link';
 import '@/styles/chat.css';
 import '@/styles/theme-toggle.css';
@@ -72,19 +73,22 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {isAdmin && (
-                <Link href="/settings" style={{ textDecoration: 'none' }}>
-                  <button className="logout-btn" style={{ background: 'transparent', border: '1px solid currentColor' }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
-                      <path
-                        d="M8 1v6M8 9v6M1 8h6M9 8h6"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span>Settings</span>
-                  </button>
-                </Link>
+                <>
+                  <PropertySwitcher />
+                  <Link href="/settings" style={{ textDecoration: 'none' }}>
+                    <button className="logout-btn" style={{ background: 'transparent', border: '1px solid currentColor' }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
+                        <path
+                          d="M8 1v6M8 9v6M1 8h6M9 8h6"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span>Settings</span>
+                    </button>
+                  </Link>
+                </>
               )}
               <ThemeToggle />
               <button className="logout-btn" onClick={logout}>

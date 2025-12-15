@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
           invalidateSessionToken(sessionToken.value);
           cookieStore.delete(AUTH_CONFIG.sessionCookieName);
           
-          logActivity(
+          await logActivity(
             currentUsername || 'unknown',
             'SESSION_INVALIDATED',
             { type: 'current' },
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         
         invalidateUserSessions(username);
         
-        logActivity(
+        await logActivity(
           currentUsername || 'unknown',
           'SESSION_INVALIDATED',
           { type: 'user', targetUser: username },
@@ -78,9 +78,9 @@ export async function POST(request: NextRequest) {
 
       case 'all':
         // Invalidate all sessions (admin only - check if needed)
-        invalidateAllSessions();
+        await invalidateAllSessions();
         
-        logActivity(
+        await logActivity(
           currentUsername || 'unknown',
           'SESSION_INVALIDATED',
           { type: 'all' },

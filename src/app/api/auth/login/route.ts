@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate credentials
-    const user = validateCredentials(username, password);
+    const user = await validateCredentials(username, password);
     if (!user) {
       // Log failed login attempt
-      logActivity(
+      await logActivity(
         username,
         'LOGIN_FAILED',
         { reason: 'Invalid credentials' },
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log successful login
-    logActivity(
+    await logActivity(
       user.username,
       'LOGIN_SUCCESS',
       { role: user.role },
